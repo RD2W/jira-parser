@@ -1,0 +1,4 @@
+jira:
+  base_url: "jira_base_url"
+  username: "your_jira_login"
+  token: "your_jira_token"
