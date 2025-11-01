@@ -2,6 +2,7 @@ package application
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/rd2w/jira-parser/internal/domain"
@@ -171,6 +172,99 @@ func TestCommentService_GetLastComment(t *testing.T) {
 				} else {
 					assert.Equal(t, tt.mockComment, result)
 				}
+			}
+		})
+	}
+}
+
+func TestCommentService_ParseMultipleTickets(t *testing.T) {
+	t.Parallel()
+
+	firstIssueComments := []domain.QAComment{
+		{
+			SoftwareVersion: "v1.0.0",
+			TestResult:      "Fixed",
+			Comment:         "Test passed successfully",
+		},
+	}
+
+	secondIssueComments := []domain.QAComment{
+		{
+			SoftwareVersion: "v1.0.1",
+			TestResult:      "Not Fixed",
+			Comment:         "Issue still exists",
+		},
+	}
+
+	tests := []struct {
+		name             string
+		ticketKeys       []string
+		mockCommentsFunc func(issueKey string) ([]domain.QAComment, error)
+		expectError      bool
+		expectedIssues   int
+	}{
+		{
+			name:       "successful parsing multiple tickets",
+			ticketKeys: []string{"TEST-123", "TEST-456"},
+			mockCommentsFunc: func(issueKey string) ([]domain.QAComment, error) {
+				switch issueKey {
+				case "TEST-123":
+					return firstIssueComments, nil
+				case "TEST-456":
+					return secondIssueComments, nil
+				default:
+					return nil, fmt.Errorf("unexpected issue key: %s", issueKey)
+				}
+			},
+			expectError:    false,
+			expectedIssues: 2,
+		},
+		{
+			name:             "empty ticket list",
+			ticketKeys:       []string{},
+			mockCommentsFunc: nil,
+			expectError:      false,
+			expectedIssues:   0,
+		},
+		{
+			name:       "error on one ticket continues processing",
+			ticketKeys: []string{"TEST-123", "TEST-789", "TEST-456"},
+			mockCommentsFunc: func(issueKey string) ([]domain.QAComment, error) {
+				switch issueKey {
+				case "TEST-123":
+					return firstIssueComments, nil
+				case "TEST-789":
+					return nil, fmt.Errorf("error parsing issue")
+				case "TEST-456":
+					return secondIssueComments, nil
+				default:
+					return nil, fmt.Errorf("unexpected issue key: %s", issueKey)
+				}
+			},
+			expectError:    false,
+			expectedIssues: 2, // Should return 2 successful issues
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo := &MockCommentRepository{
+				GetIssueCommentsFunc: tt.mockCommentsFunc,
+				GetLastQACommentFunc: func(issueKey string) (*domain.QAComment, error) {
+					return nil, nil
+				},
+			}
+
+			service := NewCommentService(mockRepo)
+			result, err := service.ParseMultipleTickets(tt.ticketKeys)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.Equal(t, tt.expectedIssues, len(result.Issues))
 			}
 		})
 	}

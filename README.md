@@ -21,6 +21,33 @@ cd jira-parser
 go mod download
 ```
 
+## Сборка
+
+Для сборки приложения с указанием версии:
+
+```bash
+go build -ldflags "-X github.com/rd2w/jira-parser/internal/version.Version=v1.2.3" -o jira-parser cmd/jira-parser/main.go
+```
+
+Для сборки с указанием версии, хеша коммита и даты:
+
+```bash
+# Вручную
+go build -ldflags "-X github.com/rd2w/jira-parser/internal/version.App.Version=v1.2.3 -X github.com/rd2w/jira-parser/internal/version.App.Commit=$(git rev-parse HEAD) -X github.com/rd2w/jira-parser/internal/version.App.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o jira-parser cmd/jira-parser/main.go
+
+# Или с использованием переменных
+VERSION=v1.2.3
+COMMIT=$(git rev-parse HEAD)
+DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+go build -ldflags "-X github.com/rd2w/jira-parser/internal/version.App.Version=$VERSION -X github.com/rd2w/jira-parser/internal/version.App.Commit=$COMMIT -X github.com/rd2w/jira-parser/internal/version.App.Date=$DATE" -o jira-parser cmd/jira-parser/main.go
+```
+
+Для обычной сборки:
+
+```bash
+go build -o jira-parser cmd/jira-parser/main.go
+```
+
 ## Конфигурация
 
 Создайте файл `configs/config.yaml`:
@@ -34,6 +61,16 @@ jira:
 
 Для Atlassian Cloud используйте email в качестве username и API токен.
 Для self-hosted JIRA можно использовать username и пароль или API токен.
+
+Также создайте файл `configs/tickets.yaml` для указания тикетов, которые нужно обработать:
+
+```yaml
+tickets:
+  - "TOS-30690"
+  - "TOS-30692"
+  - "TOS-30693"
+  - "TOS-2572"
+```
 
 ### Поддерживаемые методы аутентификации
 
@@ -55,6 +92,23 @@ jira:
 ```bash
 # Получить только последний QA комментарий
 ./jira-parser last-comment TOS-30690
+```
+
+### Получение версии приложения
+
+```bash
+# Получить версию jira-parser
+./jira-parser version
+```
+
+### Парсинг нескольких тикетов
+
+```bash
+# Обработать все тикеты, указанные в конфигурационном файле
+./jira-parser parse-multiple
+
+# Обработать конкретные тикеты, переданные в качестве аргументов
+./jira-parser parse-multiple TOS-30690 TOS-30692 TOS-30693
 ```
 
 ### Экспорт данных в JSON
