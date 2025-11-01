@@ -60,23 +60,35 @@ func NewVersionCommand() *cobra.Command {
 
 func NewParseMultipleCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "parse-multiple",
-		Short: "Parse QA comments for multiple tickets from tickets file",
+		Use:   "parse-multiple [tickets...]",
+		Short: "Parse QA comments for multiple tickets from tickets file or command line arguments",
+		Long: `Parse QA comments for multiple tickets.
+If tickets are provided as arguments, they will be used instead of the tickets file.
+Example: jira-parser parse-multiple TOS-30690 TOS-30692`,
+		Args: cobra.ArbitraryArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			service, err := createCommentService()
 			if err != nil {
 				log.Fatalf("Error: %v", err)
 			}
 
-			// Загружаем список тикетов из отдельного файла
-			ticketsConfig, err := config.LoadTickets("./configs/tickets.yaml")
-			if err != nil {
-				log.Fatalf("Failed to read tickets file: %v", err)
+			var ticketKeys []string
+
+			// Если переданы аргументы, используем их как тикеты
+			if len(args) > 0 {
+				ticketKeys = args
+			} else {
+				// Иначе загружаем список тикетов из отдельного файла
+				ticketsConfig, err := config.LoadTickets("./configs/tickets.yaml")
+				if err != nil {
+					log.Fatalf("Failed to read tickets file: %v", err)
+				}
+
+				ticketKeys = ticketsConfig.Tickets
 			}
 
-			ticketKeys := ticketsConfig.Tickets
 			if len(ticketKeys) == 0 {
-				log.Fatalf("No tickets found in tickets file")
+				log.Fatalf("No tickets provided either as arguments or in tickets file")
 			}
 
 			issuesList, err := service.ParseMultipleTickets(ticketKeys)

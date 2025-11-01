@@ -36,8 +36,8 @@ func TestNewParseMultipleCommand(t *testing.T) {
 	// Создаем команду
 	cmd := NewParseMultipleCommand()
 	assert.NotNil(t, cmd)
-	assert.Equal(t, "parse-multiple", cmd.Use)
-	assert.Equal(t, "Parse QA comments for multiple tickets from tickets file", cmd.Short)
+	assert.Equal(t, "parse-multiple [tickets...]", cmd.Use)
+	assert.Equal(t, "Parse QA comments for multiple tickets from tickets file or command line arguments", cmd.Short)
 }
 
 func TestPrintMultipleIssues(t *testing.T) {
@@ -107,5 +107,14 @@ func TestParseMultipleCommand_Execute(t *testing.T) {
 	assert.NotNil(t, cmd)
 
 	// Проверяем, что команда имеет правильные параметры
-	assert.Equal(t, "parse-multiple", cmd.Use)
+	assert.Equal(t, "parse-multiple [tickets...]", cmd.Use)
+}
+
+func TestParseMultipleCommand_WithArgs(t *testing.T) {
+	// Создаем команду
+	cmd := NewParseMultipleCommand()
+	assert.NotNil(t, cmd)
+
+	// Проверяем, что команда поддерживает аргументы
+	assert.NotNil(t, cmd.Args)
 }
