@@ -16,9 +16,9 @@ func TestLoadConfig(t *testing.T) {
 	configPath := filepath.Join(tempDir, "config.yaml")
 
 	configContent := `jira:
-  base_url: "https://test.atlassian.net"
-  username: "test@example.com"
-  token: "test-token"
+   base_url: "https://test.atlassian.net"
+   username: "test@example.com"
+   token: "test-token"
 `
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -34,9 +34,9 @@ func TestLoadConfig(t *testing.T) {
 
 	t.Run("missing base_url", func(t *testing.T) {
 		invalidConfig := `jira:
-  username: "test@example.com"
-  token: "test-token"
-`
+     username: "test@example.com"
+     token: "test-token"
+  `
 		invalidConfigPath := filepath.Join(tempDir, "invalid_config.yaml")
 		err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
 		assert.NoError(t, err)
@@ -61,16 +61,17 @@ func TestLoadConfig(t *testing.T) {
 	})
 
 	t.Run("missing token", func(t *testing.T) {
-		invalidConfig := `jira:
+  invalidConfig := `jira:
   base_url: "https://test.atlassian.net"
   username: "test@example.com"
-`
-		invalidConfigPath := filepath.Join(tempDir, "invalid_config3.yaml")
-		err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
-		assert.NoError(t, err)
-
-		_, err = LoadConfig(invalidConfigPath)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "token is required")
+  `
+  invalidConfigPath := filepath.Join(tempDir, "invalid_config3.yaml")
+  err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
+  assert.NoError(t, err)
+  
+  _, err = LoadConfig(invalidConfigPath)
+  assert.Error(t, err)
+  assert.Contains(t, err.Error(), "token is required")
 	})
+
 }

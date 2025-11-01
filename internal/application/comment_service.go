@@ -35,6 +35,26 @@ func (s *CommentService) ParseComments(issueKey string) (*domain.Issue, error) {
 	}, nil
 }
 
+func (s *CommentService) ParseMultipleTickets(ticketKeys []string) (*domain.IssuesList, error) {
+	if len(ticketKeys) == 0 {
+		return &domain.IssuesList{Issues: []domain.Issue{}}, nil
+	}
+
+	issues := make([]domain.Issue, 0, len(ticketKeys))
+
+	for _, ticketKey := range ticketKeys {
+		issue, err := s.ParseComments(ticketKey)
+		if err != nil {
+			log.Printf("Error parsing comments for ticket %s: %v", ticketKey, err)
+			// Продолжаем обработку других тикетов даже если один не удался
+			continue
+		}
+		issues = append(issues, *issue)
+	}
+
+	return &domain.IssuesList{Issues: issues}, nil
+}
+
 func (s *CommentService) GetLastComment(issueKey string) (*domain.QAComment, error) {
 	if issueKey == "" {
 		return nil, fmt.Errorf("issue key cannot be empty")

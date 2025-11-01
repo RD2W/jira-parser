@@ -62,6 +62,16 @@ jira:
 Для Atlassian Cloud используйте email в качестве username и API токен.
 Для self-hosted JIRA можно использовать username и пароль или API токен.
 
+Также создайте файл `configs/tickets.yaml` для указания тикетов, которые нужно обработать:
+
+```yaml
+tickets:
+  - "TOS-30690"
+  - "TOS-30692"
+  - "TOS-30693"
+  - "TOS-2572"
+```
+
 ### Поддерживаемые методы аутентификации
 
 - **Personal Access Token**: `token: "your-api-token"`
@@ -89,6 +99,13 @@ jira:
 ```bash
 # Получить версию jira-parser
 ./jira-parser version
+```
+
+### Парсинг нескольких тикетов из конфигурации
+
+```bash
+# Обработать все тикеты, указанные в конфигурационном файле
+./jira-parser parse-multiple
 ```
 
 ### Экспорт данных в JSON

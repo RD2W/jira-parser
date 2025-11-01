@@ -14,6 +14,11 @@ type Issue struct {
 	Comments []QAComment
 }
 
+// IssuesList представляет список JIRA тикетов с комментариями
+type IssuesList struct {
+	Issues []Issue
+}
+
 // CommentRepository интерфейс для работы с комментариями
 type CommentRepository interface {
 	GetIssueComments(issueKey string) ([]QAComment, error)
@@ -24,4 +29,5 @@ type CommentRepository interface {
 type CommentService interface {
 	ParseComments(issueKey string) (*Issue, error)
 	GetLastComment(issueKey string) (*QAComment, error)
+	ParseMultipleTickets(ticketKeys []string) (*IssuesList, error)
 }
