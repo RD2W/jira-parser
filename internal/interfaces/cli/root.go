@@ -6,6 +6,7 @@ import (
 
 	"github.com/rd2w/jira-parser/internal/application"
 	"github.com/rd2w/jira-parser/internal/infrastructure/jira"
+	"github.com/rd2w/jira-parser/internal/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -26,11 +27,30 @@ func init() {
 	rootCmd.AddCommand(NewParseCommand())
 	rootCmd.AddCommand(NewLastCommentCommand())
 	rootCmd.AddCommand(NewExportCommand())
+	rootCmd.AddCommand(NewVersionCommand())
 
 	// Настройка конфигурации
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./configs")
+}
+
+func NewVersionCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number of jira-parser",
+		Run: func(cmd *cobra.Command, args []string) {
+			if version.App.Commit != "" && version.App.Date != "" {
+				fmt.Printf("jira-parser %s (commit: %s, built: %s)\n", version.App.Version, version.App.Commit, version.App.Date)
+			} else if version.App.Commit != "" {
+				fmt.Printf("jira-parser %s (commit: %s)\n", version.App.Version, version.App.Commit)
+			} else if version.App.Date != "" {
+				fmt.Printf("jira-parser %s (built: %s)\n", version.App.Version, version.App.Date)
+			} else {
+				fmt.Printf("jira-parser %s\n", version.App.Version)
+			}
+		},
+	}
 }
 
 func createCommentService() (*application.CommentService, error) {
