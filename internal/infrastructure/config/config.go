@@ -22,5 +22,26 @@ func LoadConfig(path string) (*JiraConfig, error) {
 		return nil, err
 	}
 
+	// Validate required fields
+	if cfg.BaseURL == "" {
+		return nil, &ConfigError{Field: "base_url", Message: "base_url is required"}
+	}
+	if cfg.Username == "" {
+		return nil, &ConfigError{Field: "username", Message: "username is required"}
+	}
+	if cfg.Token == "" {
+		return nil, &ConfigError{Field: "token", Message: "token is required"}
+	}
+
 	return &cfg, nil
+}
+
+// ConfigError represents a configuration validation error
+type ConfigError struct {
+	Field   string
+	Message string
+}
+
+func (e *ConfigError) Error() string {
+	return e.Message
 }
