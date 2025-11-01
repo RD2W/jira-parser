@@ -25,6 +25,7 @@ func Execute() {
 func init() {
 	rootCmd.AddCommand(NewParseCommand())
 	rootCmd.AddCommand(NewLastCommentCommand())
+	rootCmd.AddCommand(NewExportCommand())
 
 	// Настройка конфигурации
 	viper.SetConfigName("config")
@@ -37,11 +38,21 @@ func createCommentService() (*application.CommentService, error) {
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
-	jiraClient, err := jira.NewJiraClient(
-		viper.GetString("jira.base_url"),
-		viper.GetString("jira.username"),
-		viper.GetString("jira.token"),
-	)
+	baseURL := viper.GetString("jira.base_url")
+	username := viper.GetString("jira.username")
+	token := viper.GetString("jira.token")
+
+	if baseURL == "" {
+		return nil, fmt.Errorf("jira.base_url is required in config")
+	}
+	if username == "" {
+		return nil, fmt.Errorf("jira.username is required in config")
+	}
+	if token == "" {
+		return nil, fmt.Errorf("jira.token is required in config")
+	}
+
+	jiraClient, err := jira.NewJiraClient(baseURL, username, token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JIRA client: %w", err)
 	}
