@@ -126,21 +126,13 @@ func createCommentService() (*application.CommentService, error) {
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
-	baseURL := viper.GetString("jira.base_url")
-	username := viper.GetString("jira.username")
-	token := viper.GetString("jira.token")
-
-	if baseURL == "" {
-		return nil, fmt.Errorf("jira.base_url is required in config")
-	}
-	if username == "" {
-		return nil, fmt.Errorf("jira.username is required in config")
-	}
-	if token == "" {
-		return nil, fmt.Errorf("jira.token is required in config")
+	// Загружаем конфигурацию
+	cfg, err := config.LoadConfig(viper.ConfigFileUsed())
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	jiraClient, err := jira.NewJiraClient(baseURL, username, token)
+	jiraClient, err := jira.NewJiraClient(cfg.BaseURL, cfg.Username, cfg.Token, cfg.Parsing)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JIRA client: %w", err)
 	}

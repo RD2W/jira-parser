@@ -10,6 +10,22 @@ import (
 func TestIsQAComment(t *testing.T) {
 	t.Parallel()
 
+	// Create a JiraClient with default parsing configuration
+	parsingConfig := domain.ParsingConfig{
+		QAIndicators: []string{
+			"tested on",
+			"could not test on sw",
+			"qa comment",
+			"qa verification",
+			"qa tested",
+			"test.*result",
+			"test.*passed",
+			"test.*failed",
+			"test.*status",
+		},
+	}
+	jc := &JiraClient{parsingConfig: parsingConfig}
+
 	tests := []struct {
 		name     string
 		body     string
@@ -49,7 +65,7 @@ func TestIsQAComment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := isQAComment(tt.body)
+			result := jc.isQAComment(tt.body)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -57,6 +73,38 @@ func TestIsQAComment(t *testing.T) {
 
 func TestParseQAComment(t *testing.T) {
 	t.Parallel()
+
+	// Create a JiraClient with default parsing configuration
+	parsingConfig := domain.ParsingConfig{
+		VersionPatterns: []string{
+			`(?i)Tested on (?:SW )?(v?[\d.]+(?:-[\w.]+)?)`,
+			`(?i)version.*?(v?[\d.]+(?:-[\w.]+)?)`,
+			`(?i)sw.*?(v?[\d.]+(?:-[\w.]+)?)`,
+		},
+		ResultPatterns: []string{
+			`(?i)Result:\s*([^\n\r]+)`,
+			`(?i)Status:\s*([^\n\r]+)`,
+			`(?i)(Fixed|Not Fixed|Partially Fixed|Could not test|Passed|Failed|Blocked|Resolved|Verified|Re-Test|Pending|In Progress|N/A)`,
+		},
+		CommentPatterns: []string{
+			`(?i)Comment:\s*(.+)`,
+			`(?i)Notes?:\s*(.+)`,
+			`(?i)Observations?:\s*(.+)`,
+		},
+		ResultNormalization: map[string]string{
+			"passed":         "Fixed",
+			"verified":       "Fixed",
+			"resolved":       "Fixed",
+			"re-test":        "Fixed",
+			"failed":         "Not Fixed",
+			"blocked":        "Not Fixed",
+			"pending":        "Not Fixed",
+			"in progress":    "Not Fixed",
+			"n/a":            "N/A",
+			"not applicable": "N/A",
+		},
+	}
+	jc := &JiraClient{parsingConfig: parsingConfig}
 
 	tests := []struct {
 		name     string
@@ -125,7 +173,7 @@ func TestParseQAComment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseQAComment(tt.body)
+			result, err := jc.parseQAComment(tt.body)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected.SoftwareVersion, result.SoftwareVersion)
 			assert.Equal(t, tt.expected.TestResult, result.TestResult)
@@ -181,7 +229,22 @@ func TestRemoveJiraFormatting(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := removeJiraFormatting(tt.input)
+			// Create a JiraClient with default parsing configuration
+			parsingConfig := domain.ParsingConfig{
+				QAIndicators: []string{
+					"tested on",
+					"could not test on sw",
+					"qa comment",
+					"qa verification",
+					"qa tested",
+					"test.*result",
+					"test.*passed",
+					"test.*failed",
+					"test.*status",
+				},
+			}
+			jc := &JiraClient{parsingConfig: parsingConfig}
+			result := jc.removeJiraFormatting(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -190,21 +253,70 @@ func TestRemoveJiraFormatting(t *testing.T) {
 func TestRemoveJiraFormattingWithLinks(t *testing.T) {
 	t.Parallel()
 
+	// Create a JiraClient with default parsing configuration
+	parsingConfig := domain.ParsingConfig{
+		QAIndicators: []string{
+			"tested on",
+			"could not test on sw",
+			"qa comment",
+			"qa verification",
+			"qa tested",
+			"test.*result",
+			"test.*passed",
+			"test.*failed",
+			"test.*status",
+		},
+	}
+	jc := &JiraClient{parsingConfig: parsingConfig}
+
 	// Test link removal specifically
 	input := "Tested on v1.0.0, see [results|https://jira.example.com/results] for details"
 	expected := "Tested on v1.0.0, see results for details"
-	result := removeJiraFormatting(input)
+	result := jc.removeJiraFormatting(input)
 	assert.Equal(t, expected, result)
 
 	// Test link without URL part
 	input2 := "See [this link] for more info"
 	expected2 := "See this link for more info"
-	result2 := removeJiraFormatting(input2)
+	result2 := jc.removeJiraFormatting(input2)
 	assert.Equal(t, expected2, result2)
 }
 
 func TestParseQACommentResultNormalization(t *testing.T) {
 	t.Parallel()
+
+	// Create a JiraClient with default parsing configuration
+	parsingConfig := domain.ParsingConfig{
+		VersionPatterns: []string{
+			`(?i)Tested on (?:SW )?(v?[\d.]+(?:-[\w.]+)?)`,
+			`(?i)version.*?(v?[\d.]+(?:-[\w.]+)?)`,
+			`(?i)sw.*?(v?[\d.]+(?:-[\w.]+)?)`,
+		},
+		ResultPatterns: []string{
+			`(?i)Result:\s*([^\n\r]+)`,
+			`(?i)Status:\s*([^\n\r]+)`,
+			`(?i)(Fixed|Not Fixed|Partially Fixed|Could not test|Passed|Failed|Blocked|Resolved|Verified|Re-Test|Pending|In Progress|N/A)`,
+		},
+		CommentPatterns: []string{
+			`(?i)Comment:\s*(.+)`,
+			`(?i)Notes?:\s*(.+)`,
+			`(?i)Observations?:\s*(.+)`,
+		},
+		ResultNormalization: map[string]string{
+			"passed":         "Fixed",
+			"verified":       "Fixed",
+			"resolved":       "Fixed",
+			"re-test":        "Fixed",
+			"failed":         "Not Fixed",
+			"blocked":        "Not Fixed",
+			"pending":        "Not Fixed",
+			"in progress":    "Not Fixed",
+			"n/a":            "N/A",
+			"not applicable": "N/A",
+			"not fixed":      "Not Fixed",
+		},
+	}
+	jc := &JiraClient{parsingConfig: parsingConfig}
 
 	tests := []struct {
 		name     string
@@ -240,7 +352,7 @@ func TestParseQACommentResultNormalization(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseQAComment(tt.body)
+			result, err := jc.parseQAComment(tt.body)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result.TestResult)
 		})

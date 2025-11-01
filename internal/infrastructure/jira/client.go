@@ -12,10 +12,11 @@ import (
 )
 
 type JiraClient struct {
-	client *jira.Client
+	client        *jira.Client
+	parsingConfig domain.ParsingConfig
 }
 
-func NewJiraClient(baseURL, username, token string) (*JiraClient, error) {
+func NewJiraClient(baseURL, username, token string, parsingConfig domain.ParsingConfig) (*JiraClient, error) {
 	var client *jira.Client
 	var err error
 
@@ -46,7 +47,7 @@ func NewJiraClient(baseURL, username, token string) (*JiraClient, error) {
 		return nil, fmt.Errorf("failed to create JIRA client: %w", err)
 	}
 
-	return &JiraClient{client: client}, nil
+	return &JiraClient{client: client, parsingConfig: parsingConfig}, nil
 }
 
 func (jc *JiraClient) GetIssueComments(issueKey string) ([]domain.QAComment, error) {
@@ -89,8 +90,8 @@ func (jc *JiraClient) getComments(ctx context.Context, issueKey string) ([]domai
 
 	var qaComments []domain.QAComment
 	for _, comment := range issue.Fields.Comments.Comments {
-		if isQAComment(comment.Body) {
-			qaComment, err := parseQAComment(comment.Body)
+		if jc.isQAComment(comment.Body) {
+			qaComment, err := jc.parseQAComment(comment.Body)
 			if err != nil {
 				log.Printf("Error parsing QA comment for issue %s: %v", issueKey, err)
 				// Continue processing other comments even if one fails
@@ -108,53 +109,53 @@ func (jc *JiraClient) getComments(ctx context.Context, issueKey string) ([]domai
 	return qaComments, nil
 }
 
-func isQAComment(body string) bool {
-	normalized := removeJiraFormatting(body)
+func (jc *JiraClient) isQAComment(body string) bool {
+	normalized := jc.removeJiraFormatting(body)
 	normalized = strings.ToLower(normalized)
 
-	// Check for various QA comment indicators
-	return strings.Contains(normalized, "tested on") ||
-		strings.Contains(normalized, "could not test on sw") ||
-		strings.Contains(normalized, "qa comment") ||
-		strings.Contains(normalized, "qa verification") ||
-		strings.Contains(normalized, "qa tested") ||
-		(strings.Contains(normalized, "test") &&
-			(strings.Contains(normalized, "result") ||
-				strings.Contains(normalized, "passed") ||
-				strings.Contains(normalized, "failed") ||
-				strings.Contains(normalized, "status")))
+	// Check for various QA comment indicators using configurable patterns
+	for _, indicator := range jc.parsingConfig.QAIndicators {
+		// First, check for exact string matches
+		if strings.Contains(normalized, strings.ToLower(indicator)) {
+			return true
+		}
+		// Then, check if the indicator is a regex pattern
+		if strings.Contains(indicator, ".*") {
+			matched, err := regexp.MatchString("(?is)"+indicator, normalized)
+			if err == nil && matched {
+				return true
+			}
+		}
+	}
+
+	// Additional check for specific regex patterns that might span multiple words
+	// For example, "test.*result" should match "test scenario: login\nresult: success"
+	for _, indicator := range jc.parsingConfig.QAIndicators {
+		if strings.Contains(indicator, ".*") {
+			// Replace spaces with .* to match patterns across multiple words
+			// This is a special case for patterns like "test.*result" to match "test X result"
+			spaceAwarePattern := strings.ReplaceAll(indicator, " ", ".*")
+			matched, err := regexp.MatchString("(?is)"+spaceAwarePattern, normalized)
+			if err == nil && matched {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
-func parseQAComment(body string) (domain.QAComment, error) {
+func (jc *JiraClient) parseQAComment(body string) (domain.QAComment, error) {
 	var comment domain.QAComment
-	normalizedBody := removeJiraFormatting(body)
+	normalizedBody := jc.removeJiraFormatting(body)
 
-	// Version patterns - more comprehensive
-	versionRe := regexp.MustCompile(`(?i)Tested on (?:SW )?(v?[\d.]+(?:-[\w.]+)?)`)
-	// More flexible version pattern
-	altVersionRe := regexp.MustCompile(`(?i)version.*?(v?[\d.]+(?:-[\w.]+)?)`)
-	// Alternative version pattern for different formats
-	swVersionRe := regexp.MustCompile(`(?i)sw.*?(v?[\d.]+(?:-[\w.]+)?)`)
-
-	// Result patterns - expanded
-	resultRe := regexp.MustCompile(`(?i)Result:\s*([^\n\r]+)`)
-	statusRe := regexp.MustCompile(`(?i)Status:\s*([^\n\r]+)`)
-	// Alternative result patterns with more options
-	altResultRe := regexp.MustCompile(`(?i)(Fixed|Not Fixed|Partially Fixed|Could not test|Passed|Failed|Blocked|Resolved|Verified|Re-Test|Pending|In Progress|N/A)`)
-
-	// Comment patterns
-	commentRe := regexp.MustCompile(`(?i)Comment:\s*(.+)`)
-	noteRe := regexp.MustCompile(`(?i)Notes?:\s*(.+)`)
-	// Additional comment patterns
-	observationRe := regexp.MustCompile(`(?i)Observations?:\s*(.+)`)
-
-	// Extract version with multiple patterns
-	if matches := versionRe.FindStringSubmatch(normalizedBody); len(matches) > 1 {
-		comment.SoftwareVersion = matches[1]
-	} else if matches := altVersionRe.FindStringSubmatch(normalizedBody); len(matches) > 1 {
-		comment.SoftwareVersion = matches[1]
-	} else if matches := swVersionRe.FindStringSubmatch(normalizedBody); len(matches) > 1 {
-		comment.SoftwareVersion = matches[1]
+	// Extract version with configurable patterns
+	for _, pattern := range jc.parsingConfig.VersionPatterns {
+		re := regexp.MustCompile(pattern)
+		if matches := re.FindStringSubmatch(normalizedBody); len(matches) > 1 {
+			comment.SoftwareVersion = matches[1]
+			break
+		}
 	}
 
 	// Handle "could not test" case - extract version if possible
@@ -167,32 +168,27 @@ func parseQAComment(body string) (domain.QAComment, error) {
 		comment.TestResult = "Could not test"
 	}
 
-	// Extract result with multiple patterns
-	if matches := resultRe.FindStringSubmatch(normalizedBody); len(matches) > 1 {
-		comment.TestResult = strings.TrimSpace(matches[1])
-	} else if matches := statusRe.FindStringSubmatch(normalizedBody); len(matches) > 1 {
-		comment.TestResult = strings.TrimSpace(matches[1])
-	} else if matches := altResultRe.FindStringSubmatch(normalizedBody); len(matches) > 1 {
-		result := strings.TrimSpace(matches[1])
-		// Normalize common variations
-		switch strings.ToLower(result) {
-		case "passed", "verified", "resolved", "re-test":
-			result = "Fixed"
-		case "failed", "blocked", "pending", "in progress":
-			result = "Not Fixed"
-		case "n/a", "not applicable":
-			result = "N/A"
+	// Extract result with configurable patterns
+	for _, pattern := range jc.parsingConfig.ResultPatterns {
+		re := regexp.MustCompile(pattern)
+		if matches := re.FindStringSubmatch(normalizedBody); len(matches) > 1 {
+			result := strings.TrimSpace(matches[1])
+			// Normalize common variations using configurable mapping
+			if normalized, exists := jc.parsingConfig.ResultNormalization[strings.ToLower(result)]; exists {
+				result = normalized
+			}
+			comment.TestResult = result
+			break
 		}
-		comment.TestResult = result
 	}
 
-	// Extract comment with multiple patterns
-	if matches := commentRe.FindStringSubmatch(normalizedBody); len(matches) > 1 {
-		comment.Comment = strings.TrimSpace(matches[1])
-	} else if matches := noteRe.FindStringSubmatch(normalizedBody); len(matches) > 1 {
-		comment.Comment = strings.TrimSpace(matches[1])
-	} else if matches := observationRe.FindStringSubmatch(normalizedBody); len(matches) > 1 {
-		comment.Comment = strings.TrimSpace(matches[1])
+	// Extract comment with configurable patterns
+	for _, pattern := range jc.parsingConfig.CommentPatterns {
+		re := regexp.MustCompile(pattern)
+		if matches := re.FindStringSubmatch(normalizedBody); len(matches) > 1 {
+			comment.Comment = strings.TrimSpace(matches[1])
+			break
+		}
 	}
 
 	// If we still don't have a result but found "could not test" somewhere, set it
@@ -203,48 +199,52 @@ func parseQAComment(body string) (domain.QAComment, error) {
 	// If we still don't have a result, try to infer from other common keywords
 	if comment.TestResult == "" {
 		lowerBody := strings.ToLower(normalizedBody)
-		if strings.Contains(lowerBody, "not fixed") {
-			comment.TestResult = "Not Fixed"
-		} else if strings.Contains(lowerBody, "partially fixed") {
-			comment.TestResult = "Partially Fixed"
-		} else if strings.Contains(lowerBody, "fixed") {
-			comment.TestResult = "Fixed"
-		} else if strings.Contains(lowerBody, "passed") {
-			comment.TestResult = "Fixed"
-		} else if strings.Contains(lowerBody, "failed") {
-			comment.TestResult = "Not Fixed"
-		} else if strings.Contains(lowerBody, "could not test") {
-			comment.TestResult = "Could not test"
-		} else if strings.Contains(lowerBody, "verified") {
-			comment.TestResult = "Fixed"
-		} else if strings.Contains(lowerBody, "resolved") {
-			comment.TestResult = "Fixed"
-		} else if strings.Contains(lowerBody, "blocked") {
-			comment.TestResult = "Not Fixed"
-		} else if strings.Contains(lowerBody, "pending") {
-			comment.TestResult = "Not Fixed"
+		for indicator, normalizedResult := range jc.parsingConfig.ResultNormalization {
+			if strings.Contains(lowerBody, indicator) {
+				comment.TestResult = normalizedResult
+				break
+			}
 		}
 	}
 
-	// Normalize result if needed
-	if comment.TestResult == "Passed" {
-		comment.TestResult = "Fixed"
-	} else if comment.TestResult == "Failed" {
-		comment.TestResult = "Not Fixed"
-	} else if strings.ToLower(comment.TestResult) == "not fixed" {
-		// Ensure proper capitalization
-		comment.TestResult = "Not Fixed"
-	} else if comment.TestResult == "Verified" {
-		comment.TestResult = "Fixed"
-	} else if comment.TestResult == "Resolved" {
-		comment.TestResult = "Fixed"
+	// Additional fallback for common result indicators not covered by patterns
+	if comment.TestResult == "" {
+		lowerBody := strings.ToLower(normalizedBody)
+		if strings.Contains(lowerBody, "not fixed") {
+			comment.TestResult = "not fixed"
+		} else if strings.Contains(lowerBody, "partially fixed") {
+			comment.TestResult = "partially fixed"
+		} else if strings.Contains(lowerBody, "fixed") {
+			comment.TestResult = "fixed"
+		} else if strings.Contains(lowerBody, "passed") {
+			comment.TestResult = "passed"
+		} else if strings.Contains(lowerBody, "failed") {
+			comment.TestResult = "failed"
+		} else if strings.Contains(lowerBody, "could not test") {
+			comment.TestResult = "could not test"
+		} else if strings.Contains(lowerBody, "verified") {
+			comment.TestResult = "verified"
+		} else if strings.Contains(lowerBody, "resolved") {
+			comment.TestResult = "resolved"
+		} else if strings.Contains(lowerBody, "blocked") {
+			comment.TestResult = "blocked"
+		} else if strings.Contains(lowerBody, "pending") {
+			comment.TestResult = "pending"
+		}
+	}
+
+	// Final normalization using configurable mapping
+	if comment.TestResult != "" {
+		if normalized, exists := jc.parsingConfig.ResultNormalization[strings.ToLower(comment.TestResult)]; exists {
+			comment.TestResult = normalized
+		}
 	}
 
 	return comment, nil
 }
 
 // removeJiraFormatting удаляет JIRA-разметку из текста
-func removeJiraFormatting(text string) string {
+func (jc *JiraClient) removeJiraFormatting(text string) string {
 	// Удаляем базовое форматирование JIRA
 	replacements := map[string]string{
 		"*":               "", // жирный
