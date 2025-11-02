@@ -14,9 +14,9 @@ builds:
     ldflags:
       - -s -w
       - -buildmode=pie
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
+      - -X main.buildVersion={{.Version}}
+      - -X main.buildCommit={{.Commit}}
+      - -X main.buildDate={{.Date}}
     flags:
       - -a
     tags:
