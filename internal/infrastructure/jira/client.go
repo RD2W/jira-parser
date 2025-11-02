@@ -9,6 +9,7 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/rd2w/jira-parser/internal/domain"
+	"github.com/rd2w/jira-parser/internal/infrastructure/auth"
 )
 
 type JiraClient struct {
@@ -45,6 +46,12 @@ func NewJiraClient(baseURL, username, token string, parsingConfig domain.Parsing
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JIRA client: %w", err)
+	}
+
+	// Validate the token before returning the client
+	validator := auth.NewJiraTokenValidator()
+	if err := validator.ValidateToken(baseURL, username, token); err != nil {
+		return nil, fmt.Errorf("token validation failed: %w", err)
 	}
 
 	return &JiraClient{client: client, parsingConfig: parsingConfig}, nil
