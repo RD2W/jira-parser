@@ -34,6 +34,8 @@ func init() {
 	rootCmd.AddCommand(NewExportCommand())
 	rootCmd.AddCommand(NewVersionCommand())
 	rootCmd.AddCommand(NewParseMultipleCommand())
+	rootCmd.AddCommand(NewDocsCommand())
+	rootCmd.AddCommand(NewTutorialCommand())
 
 	// Настройка конфигурации
 	viper.SetConfigName("config")
