@@ -7,25 +7,25 @@ import (
 
 var (
 	// BuildVersion can be set at build time using ldflags
-	BuildVersion string
+	buildVersion string
 	// BuildCommit can be set at build time using ldflags
-	BuildCommit string
+	buildCommit string
 	// BuildDate can be set at build time using ldflags
-	BuildDate string
+	buildDate string
 )
 
 func init() {
 	// If BuildVersion was set during build, use it
-	if BuildVersion != "" {
-		version.App.Version = BuildVersion
+	if buildVersion != "" {
+		version.App.Version = buildVersion
 	}
 	// If BuildCommit was set during build, use it
-	if BuildCommit != "" {
-		version.App.Commit = BuildCommit
+	if buildCommit != "" {
+		version.App.Commit = buildCommit
 	}
 	// If BuildDate was set during build, use it
-	if BuildDate != "" {
-		version.App.Date = BuildDate
+	if buildDate != "" {
+		version.App.Date = buildDate
 	}
 }
 

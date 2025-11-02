@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/rd2w/jira-parser/internal/domain"
-	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -77,7 +76,7 @@ func TestPrintMultipleIssues(t *testing.T) {
 
 	printMultipleIssues(issuesList)
 
-	w.Close()
+	_ = w.Close()
 	out, _ := io.ReadAll(r)
 	os.Stdout = old
 
@@ -99,11 +98,8 @@ func TestPrintMultipleIssues(t *testing.T) {
 }
 
 func TestParseMultipleCommand_Execute_Basic(t *testing.T) {
-	// Создаем команду
-	cmd := &cobra.Command{}
-
 	// Проверяем, что команда может быть создана без ошибок
-	cmd = NewParseMultipleCommand()
+	cmd := NewParseMultipleCommand()
 	assert.NotNil(t, cmd)
 
 	// Проверяем, что команда имеет правильные параметры
