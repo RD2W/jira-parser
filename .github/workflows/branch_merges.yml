@@ -1,0 +1,151 @@
+name: CI/CD Pipeline for Branch Merges
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, dev]
+
+jobs:
+  branch-validation:
+    name: Validate Branch Compatibility
+    runs-on: ubuntu-latest
+    # Проверяем, что PR идёт в main или dev
+    if: github.base_ref == 'main' || github.base_ref == 'dev'
+    outputs:
+      valid: ${{ steps.validate.outputs.valid }}
+    # Определяем, какие ветки допустимы в зависимости от целевой ветки
+    steps:
+      - name: Check branch compatibility
+        id: validate
+        run: |
+          TARGET=${{ github.base_ref }}
+          SOURCE=${{ github.head_ref }}
+          echo "➡️ Target branch: $TARGET"
+          echo "⬅️ Source branch: $SOURCE"
+          
+          if [[ "$TARGET" == "main" && "$SOURCE" != "dev" ]]; then
+            echo "❌ PR from '$SOURCE' to 'main' is not allowed. Only 'dev' can be merged into 'main'."
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          if [[ "$TARGET" == "dev" && ! "$SOURCE" =~ ^(feature/.*|feat/.*|bugfix/.*)$ ]]; then
+            echo "❌ PR from '$SOURCE' to 'dev' is not allowed. Only feature/* or bugfix/* can be merged into 'dev'."
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "✅ Branch compatibility check passed."
+          echo "valid=true" >> $GITHUB_OUTPUT
+
+  # Job для линтинга
+  lint:
+    name: Run Linter
+    runs-on: ubuntu-latest
+    needs: branch-validation
+    if: needs.branch-validation.outputs.valid == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          #install-mode: goinstall
+          version: latest
+          args: --timeout=5m --verbose
+          skip-cache: false
+
+  # Job для тестов
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: branch-validation
+    if: needs.branch-validation.outputs.valid == 'true'
+
+    strategy:
+      matrix:
+        go-version: ['1.25']
+        os: [ubuntu-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Run comprehensive tests
+        run: |
+          go test -v -race -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out
+          go tool cover -html=coverage.out -o coverage.html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-report
+          path: coverage.html
+
+  # Job для сборки приложения
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [branch-validation, lint, test]
+    if: needs.branch-validation.outputs.valid == 'true'
+
+    strategy:
+      matrix:
+        go-version: ['1.25']
+        os: [ubuntu-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Build application
+        run: |
+          # Создаем директорию для бинарников
+          mkdir -p dist
+          
+          # Собираем основное приложение
+          echo "🔨 Building main application..."
+          go build -o dist/jira-parser -v -ldflags="-s -w" ./cmd/jira-parser/main.go
+          
+          # Проверяем что бинарник создан
+          if [ -f dist/jira-parser ]; then
+            echo "✅ Build successful!"
+            ls -la dist/
+          else
+            echo "❌ Build failed!"
+            exit 1
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: application-binary
+          path: dist/
+          retention-days: 7

@@ -25,6 +25,7 @@ node_modules/
 *.log
 
 # Coverage
+coverage.out
 coverage.txt
 coverage.html
 
