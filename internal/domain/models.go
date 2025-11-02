@@ -5,6 +5,7 @@ type QAComment struct {
 	SoftwareVersion string
 	TestResult      string // "Fixed", "Not Fixed", "Partially Fixed", "Could not test"
 	Comment         string
+	Created         string // Дата создания комментария в формате RFC3339
 }
 
 // Issue представляет JIRA тикет с комментариями

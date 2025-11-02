@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rd2w/jira-parser/internal/application"
 	"github.com/rd2w/jira-parser/internal/domain"
@@ -59,7 +60,11 @@ func NewVersionCommand() *cobra.Command {
 }
 
 func NewParseMultipleCommand() *cobra.Command {
-	return &cobra.Command{
+	var resultFilter string
+	var dateFrom string
+	var dateTo string
+
+	cmd := &cobra.Command{
 		Use:   "parse-multiple [tickets...]",
 		Short: "Parse QA comments for multiple tickets from tickets file or command line arguments",
 		Long: `Parse QA comments for multiple tickets.
@@ -96,9 +101,65 @@ Example: jira-parser parse-multiple TOS-30690 TOS-30692`,
 				log.Fatalf("Failed to parse multiple tickets: %v", err)
 			}
 
+			// Apply filters if specified
+			if resultFilter != "" || dateFrom != "" || dateTo != "" {
+				for i := range issuesList.Issues {
+					var filteredComments []domain.QAComment
+					for _, comment := range issuesList.Issues[i].Comments {
+						// Apply result filter
+						if resultFilter != "" && comment.TestResult != resultFilter {
+							continue
+						}
+
+						// Apply date filters
+						if dateFrom != "" || dateTo != "" {
+							// Parse comment creation date
+							commentTime, err := time.Parse(time.RFC3339, comment.Created)
+							if err != nil {
+								log.Printf("Warning: Could not parse comment creation date: %s", comment.Created)
+								// Skip date filtering for this comment if we can't parse the date
+								filteredComments = append(filteredComments, comment)
+								continue
+							}
+
+							// Apply date-from filter
+							if dateFrom != "" {
+								fromTime, err := time.Parse("2006-01-02", dateFrom)
+								if err != nil {
+									log.Printf("Warning: Invalid date-from format: %s", dateFrom)
+								} else if commentTime.Before(fromTime) {
+									continue
+								}
+							}
+
+							// Apply date-to filter
+							if dateTo != "" {
+								toTime, err := time.Parse("2006-01-02", dateTo)
+								if err != nil {
+									log.Printf("Warning: Invalid date-to format: %s", dateTo)
+								} else if commentTime.After(toTime) {
+									continue
+								}
+							}
+						}
+
+						filteredComments = append(filteredComments, comment)
+					}
+
+					// Update issue with filtered comments
+					issuesList.Issues[i].Comments = filteredComments
+				}
+			}
+
 			printMultipleIssues(issuesList)
 		},
 	}
+
+	cmd.Flags().StringVar(&resultFilter, "result", "", "Filter comments by test result (e.g., Fixed, Not Fixed, etc.)")
+	cmd.Flags().StringVar(&dateFrom, "date-from", "", "Filter comments created after specified date (format: YYYY-MM-DD)")
+	cmd.Flags().StringVar(&dateTo, "date-to", "", "Filter comments created before specified date (format: YYYY-MM-DD)")
+
+	return cmd
 }
 
 func printMultipleIssues(issuesList *domain.IssuesList) {

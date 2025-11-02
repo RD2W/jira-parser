@@ -59,16 +59,37 @@ func (jc *JiraClient) GetLastQAComment(issueKey string) (*domain.QAComment, erro
 		return nil, fmt.Errorf("issue key cannot be empty")
 	}
 
-	comments, err := jc.getComments(context.Background(), issueKey)
+	issue, _, err := jc.client.Issue.GetWithContext(context.Background(), issueKey, &jira.GetQueryOptions{
+		Expand: "comments",
+	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get issue %s: %w", issueKey, err)
 	}
 
-	if len(comments) == 0 {
+	if issue.Fields.Comments == nil {
+		log.Printf("No comments found for issue %s", issueKey)
 		return nil, nil
 	}
 
-	return &comments[len(comments)-1], nil
+	// Process comments in reverse order to find the last QA comment
+	for i := len(issue.Fields.Comments.Comments) - 1; i >= 0; i-- {
+		comment := issue.Fields.Comments.Comments[i]
+		if jc.isQAComment(comment.Body) {
+			qaComment, err := jc.parseQAComment(comment.Body, comment.Created)
+			if err != nil {
+				log.Printf("Error parsing QA comment for issue %s: %v", issueKey, err)
+				// Continue processing other comments even if one fails
+				continue
+			}
+
+			// Only return the comment if it has meaningful data
+			if qaComment.SoftwareVersion != "" || qaComment.TestResult != "" || qaComment.Comment != "" {
+				return &qaComment, nil
+			}
+		}
+	}
+
+	return nil, nil
 }
 
 func (jc *JiraClient) getComments(ctx context.Context, issueKey string) ([]domain.QAComment, error) {
@@ -89,9 +110,10 @@ func (jc *JiraClient) getComments(ctx context.Context, issueKey string) ([]domai
 	}
 
 	var qaComments []domain.QAComment
+	// Process comments to find QA comments
 	for _, comment := range issue.Fields.Comments.Comments {
 		if jc.isQAComment(comment.Body) {
-			qaComment, err := jc.parseQAComment(comment.Body)
+			qaComment, err := jc.parseQAComment(comment.Body, comment.Created)
 			if err != nil {
 				log.Printf("Error parsing QA comment for issue %s: %v", issueKey, err)
 				// Continue processing other comments even if one fails
@@ -145,7 +167,7 @@ func (jc *JiraClient) isQAComment(body string) bool {
 	return false
 }
 
-func (jc *JiraClient) parseQAComment(body string) (domain.QAComment, error) {
+func (jc *JiraClient) parseQAComment(body string, created string) (domain.QAComment, error) {
 	var comment domain.QAComment
 	normalizedBody := jc.removeJiraFormatting(body)
 
@@ -190,6 +212,9 @@ func (jc *JiraClient) parseQAComment(body string) (domain.QAComment, error) {
 			break
 		}
 	}
+
+	// Set created date
+	comment.Created = created
 
 	// If we still don't have a result but found "could not test" somewhere, set it
 	if comment.TestResult == "" && strings.Contains(strings.ToLower(normalizedBody), "could not test") {
