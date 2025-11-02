@@ -105,7 +105,7 @@ func TestParseCommand_WithArgs(t *testing.T) {
 	_ = cmd.Execute()
 
 	// Закрываем канал записи и восстанавливаем stdout
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	// Читаем вывод (даже если команда завершилась с ошибкой)
