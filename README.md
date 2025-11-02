@@ -79,7 +79,7 @@ parsing:
     - "(?i)Tested on (?:SW )?(v?[\\d.]+(?:-[\\w.]+)?)"
     - "(?i)version.*?(v?[\\d.]+(?:-[\\w.]+)?)"
     - "(?i)sw.*?(v?[\\d.]+(?:-[\\w.]+)?)"
- result_patterns:
+  result_patterns:
     - "(?i)Result:\\s*([^\\n\\r]+)"
     - "(?i)Status:\\s*([^\\n\\r]+)"
     - "(?i)(Fixed|Not Fixed|Partially Fixed|Could not test|Passed|Failed|Blocked|Resolved|Verified|Re-Test|Pending|In Progress|N/A)"

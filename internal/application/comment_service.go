@@ -27,10 +27,21 @@ func (s *CommentService) ParseComments(issueKey string) (*domain.Issue, error) {
 		return nil, fmt.Errorf("failed to get comments for issue %s: %w", issueKey, err)
 	}
 
+	// Get issue info to populate the Summary
+	issueInfo, err := s.repo.GetIssueInfo(issueKey)
+	if err != nil {
+		log.Printf("Warning: Could not get issue info for %s: %v", issueKey, err)
+		// Continue with empty summary if we can't get the issue info
+		issueInfo = &domain.IssueInfo{
+			Key:     issueKey,
+			Summary: "",
+		}
+	}
+
 	log.Printf("Successfully parsed %d comments for issue %s", len(comments), issueKey)
 	return &domain.Issue{
-		Key:      issueKey,
-		Summary:  "", // Summary will be populated if needed from JIRA
+		Key:      issueInfo.Key,
+		Summary:  issueInfo.Summary,
 		Comments: comments,
 	}, nil
 }

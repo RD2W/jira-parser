@@ -238,3 +238,49 @@ func TestFilterCommentsByDate(t *testing.T) {
 	assert.Equal(t, "v1.0.0", filteredComments[0].SoftwareVersion)
 	assert.Equal(t, "v1.0.1", filteredComments[1].SoftwareVersion)
 }
+
+func TestPrintIssueCommentsDateFormat(t *testing.T) {
+	comments := []domain.QAComment{
+		{
+			SoftwareVersion: "v1.0.0",
+			TestResult:      "Fixed",
+			Comment:         "All tests passed",
+			Created:         "2025-08-12T16:35:38.514+0300", // JIRA format with milliseconds and timezone
+		},
+		{
+			SoftwareVersion: "v1.0.1",
+			TestResult:      "Not Fixed",
+			Comment:         "Issue still exists",
+			Created:         "2025-08-18T11:28:56.224+0300", // JIRA format with milliseconds and timezone
+		},
+	}
+
+	issue := &domain.Issue{
+		Key:      "TEST-123",
+		Summary:  "Test Summary",
+		Comments: comments,
+	}
+
+	// Capture output
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printIssueComments(issue)
+
+	// Close and restore
+	_ = w.Close()
+	os.Stdout = old
+
+	// Read captured output
+	output, _ := io.ReadAll(r)
+
+	// Check that the output contains properly formatted dates
+	outputStr := string(output)
+	assert.Contains(t, outputStr, "2025-08-12 16:35:38")
+	assert.Contains(t, outputStr, "2025-08-18 11:28:56")
+
+	// Ensure that incorrect year formatting is not present
+	assert.NotContains(t, outputStr, "225-08-12") // Wrong year due to incorrect format
+	assert.NotContains(t, outputStr, "225-08-18") // Wrong year due to incorrect format
+}

@@ -29,10 +29,17 @@ type ParsingConfig struct {
 	ResultNormalization map[string]string `mapstructure:"result_normalization"`
 }
 
+// IssueInfo содержит основную информацию о JIRA тикете
+type IssueInfo struct {
+	Key     string
+	Summary string
+}
+
 // CommentRepository интерфейс для работы с комментариями
 type CommentRepository interface {
 	GetIssueComments(issueKey string) ([]QAComment, error)
 	GetLastQAComment(issueKey string) (*QAComment, error)
+	GetIssueInfo(issueKey string) (*IssueInfo, error)
 }
 
 // CommentService интерфейс для бизнес-логики

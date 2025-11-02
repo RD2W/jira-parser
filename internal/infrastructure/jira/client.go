@@ -57,6 +57,18 @@ func NewJiraClient(baseURL, username, token string, parsingConfig domain.Parsing
 	return &JiraClient{client: client, parsingConfig: parsingConfig}, nil
 }
 
+func (jc *JiraClient) GetIssueInfo(issueKey string) (*domain.IssueInfo, error) {
+	issue, _, err := jc.client.Issue.GetWithContext(context.Background(), issueKey, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get issue %s: %w", issueKey, err)
+	}
+
+	return &domain.IssueInfo{
+		Key:     issue.Key,
+		Summary: issue.Fields.Summary,
+	}, nil
+}
+
 func (jc *JiraClient) GetIssueComments(issueKey string) ([]domain.QAComment, error) {
 	return jc.getComments(context.Background(), issueKey)
 }

@@ -13,6 +13,7 @@ import (
 type MockCommentRepository struct {
 	GetIssueCommentsFunc func(issueKey string) ([]domain.QAComment, error)
 	GetLastQACommentFunc func(issueKey string) (*domain.QAComment, error)
+	GetIssueInfoFunc     func(issueKey string) (*domain.IssueInfo, error)
 }
 
 func (m *MockCommentRepository) GetIssueComments(issueKey string) ([]domain.QAComment, error) {
@@ -27,6 +28,16 @@ func (m *MockCommentRepository) GetLastQAComment(issueKey string) (*domain.QACom
 		return m.GetLastQACommentFunc(issueKey)
 	}
 	return nil, nil
+}
+
+func (m *MockCommentRepository) GetIssueInfo(issueKey string) (*domain.IssueInfo, error) {
+	if m.GetIssueInfoFunc != nil {
+		return m.GetIssueInfoFunc(issueKey)
+	}
+	return &domain.IssueInfo{
+		Key:     issueKey,
+		Summary: "", // Default empty summary for tests
+	}, nil
 }
 
 func TestCommentService_ParseComments(t *testing.T) {
@@ -84,6 +95,13 @@ func TestCommentService_ParseComments(t *testing.T) {
 					assert.Equal(t, tt.issueKey, issueKey)
 					return tt.mockComments, tt.mockError
 				},
+				GetIssueInfoFunc: func(issueKey string) (*domain.IssueInfo, error) {
+					assert.Equal(t, tt.issueKey, issueKey)
+					return &domain.IssueInfo{
+						Key:     issueKey,
+						Summary: "Test summary for " + issueKey, // Provide a summary for testing
+					}, nil
+				},
 			}
 
 			service := NewCommentService(mockRepo)
@@ -96,6 +114,7 @@ func TestCommentService_ParseComments(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				assert.Equal(t, tt.issueKey, result.Key)
+				assert.Equal(t, "Test summary for "+tt.issueKey, result.Summary) // Check that summary is populated
 				assert.Equal(t, tt.expectedCount, len(result.Comments))
 
 				if tt.expectedCount > 0 {
@@ -155,6 +174,13 @@ func TestCommentService_GetLastComment(t *testing.T) {
 				GetLastQACommentFunc: func(issueKey string) (*domain.QAComment, error) {
 					assert.Equal(t, tt.issueKey, issueKey)
 					return tt.mockComment, tt.mockError
+				},
+				GetIssueInfoFunc: func(issueKey string) (*domain.IssueInfo, error) {
+					assert.Equal(t, tt.issueKey, issueKey)
+					return &domain.IssueInfo{
+						Key:     issueKey,
+						Summary: "Test summary for " + issueKey,
+					}, nil
 				},
 			}
 
@@ -252,6 +278,12 @@ func TestCommentService_ParseMultipleTickets(t *testing.T) {
 				GetIssueCommentsFunc: tt.mockCommentsFunc,
 				GetLastQACommentFunc: func(issueKey string) (*domain.QAComment, error) {
 					return nil, nil
+				},
+				GetIssueInfoFunc: func(issueKey string) (*domain.IssueInfo, error) {
+					return &domain.IssueInfo{
+						Key:     issueKey,
+						Summary: "Test summary for " + issueKey,
+					}, nil
 				},
 			}
 

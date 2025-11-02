@@ -36,7 +36,7 @@ func NewExportCommand() *cobra.Command {
 
 func printIssueCommentsJSON(issue *domain.Issue, pretty bool) {
 	if pretty {
-		output, err := json.MarshalIndent(issue, "", "  ")
+		output, err := json.MarshalIndent(issue, "", " ")
 		if err != nil {
 			log.Fatalf("Error marshaling JSON: %v", err)
 		}
