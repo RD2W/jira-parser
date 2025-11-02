@@ -12,6 +12,7 @@
 - 📤 **Экспорт в JSON** - возможность экспорта данных в формате JSON для интеграции с другими системами
 - 🐛 **Обработка ошибок и логирование** - надежная обработка ошибок и детализированное логирование
 - 🔄 **Поддержка разных форматов JIRA-разметки** - обработка код-блоков, цитат, панелей и других элементов форматирования
+- ⚙️ **Настраиваемые паттерны парсинга** - возможность настройки паттернов для поиска версий, результатов и комментариев
 
 ## Установка
 
@@ -56,7 +57,42 @@ go build -o jira-parser cmd/jira-parser/main.go
 jira:
   base_url: "https://your-domain.atlassian.net"
   username: "your-email@example.com"  # для Atlassian Cloud используйте email
- token: "your-api-token"             # API токен для аутентификации
+  token: "your-api-token"             # API токен для аутентификации
+
+parsing:
+  version_patterns:
+    - "(?i)Tested on (?:SW )?(v?[\d.]+(?:-[\w.]+)?)"
+    - "(?i)version.*?(v?[\d.]+(?:-[\w.]+)?)"
+    - "(?i)sw.*?(v?[\d.]+(?:-[\w.]+)?)"
+ result_patterns:
+    - "(?i)Result:\s*([^\n\r]+)"
+    - "(?i)Status:\s*([^\n\r]+)"
+    - "(?i)(Fixed|Not Fixed|Partially Fixed|Could not test|Passed|Failed|Blocked|Resolved|Verified|Re-Test|Pending|In Progress|N/A)"
+  comment_patterns:
+    - "(?i)Comment:\s*(.+)"
+    - "(?i)Notes?:\s*(.+)"
+    - "(?i)Observations?:\s*(.+)"
+  qa_indicators:
+    - "tested on"
+    - "could not test on sw"
+    - "qa comment"
+    - "qa verification"
+    - "qa tested"
+    - "test.*result"
+    - "test.*passed"
+    - "test.*failed"
+    - "test.*status"
+  result_normalization:
+    passed: "Fixed"
+    verified: "Fixed"
+    resolved: "Fixed"
+    re-test: "Fixed"
+    failed: "Not Fixed"
+    blocked: "Not Fixed"
+    pending: "Not Fixed"
+    "in progress": "Not Fixed"
+    "n/a": "N/A"
+    "not applicable": "N/A"
 ```
 
 Для Atlassian Cloud используйте email в качестве username и API токен.
