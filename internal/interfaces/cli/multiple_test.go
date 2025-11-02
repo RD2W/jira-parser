@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewParseMultipleCommand(t *testing.T) {
+func TestNewParseMultipleCommand_Basic(t *testing.T) {
 	// Создаем временный конфигурационный файл
 	tempDir := t.TempDir()
 	configPath := tempDir + "/config.yaml"
@@ -98,7 +98,7 @@ func TestPrintMultipleIssues(t *testing.T) {
 	assert.Contains(t, output, "Version: v1.0.2")
 }
 
-func TestParseMultipleCommand_Execute(t *testing.T) {
+func TestParseMultipleCommand_Execute_Basic(t *testing.T) {
 	// Создаем команду
 	cmd := &cobra.Command{}
 

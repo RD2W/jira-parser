@@ -121,6 +121,15 @@ tickets:
 ```bash
 # Получить все QA комментарии для задачи
 ./jira-parser parse TOS-30690
+
+# Получить QA комментарии с фильтрацией по результату
+./jira-parser parse TOS-30690 --result="Fixed"
+
+# Получить QA комментарии с фильтрацией по дате создания
+./jira-parser parse TOS-30690 --date-from=2023-01-01 --date-to=2023-12-31
+
+# Получить QA комментарии с фильтрацией по нескольким критериям
+./jira-parser parse TOS-30690 --result="Fixed" --date-from=2023-01-01
 ```
 
 ### Получение последнего QA комментария
@@ -145,6 +154,12 @@ tickets:
 
 # Обработать конкретные тикеты, переданные в качестве аргументов
 ./jira-parser parse-multiple TOS-30690 TOS-30692 TOS-30693
+
+# Обработать тикеты с фильтрацией по результату
+./jira-parser parse-multiple TOS-30690 TOS-30692 --result="Fixed"
+
+# Обработать тикеты с фильтрацией по дате создания
+./jira-parser parse-multiple TOS-30690 TOS-30692 --date-from=2023-01-01 --date-to=2023-12-31
 ```
 
 ### Экспорт данных в JSON

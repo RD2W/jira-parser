@@ -173,7 +173,7 @@ func TestParseQAComment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := jc.parseQAComment(tt.body)
+			result, err := jc.parseQAComment(tt.body, "2023-01-01T00:00:00.000+0000")
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected.SoftwareVersion, result.SoftwareVersion)
 			assert.Equal(t, tt.expected.TestResult, result.TestResult)
@@ -352,7 +352,7 @@ func TestParseQACommentResultNormalization(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := jc.parseQAComment(tt.body)
+			result, err := jc.parseQAComment(tt.body, "2023-01-01T00:00:00.000+0000")
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result.TestResult)
 		})
