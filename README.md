@@ -29,20 +29,20 @@ go mod download
 Для сборки приложения с указанием версии:
 
 ```bash
-go build -ldflags "-X github.com/rd2w/jira-parser/internal/version.Version=v1.2.3" -o jira-parser cmd/jira-parser/main.go
+go build -ldflags "-X main.buildVersion=v1.2.3" -o jira-parser cmd/jira-parser/main.go
 ```
 
 Для сборки с указанием версии, хеша коммита и даты:
 
 ```bash
 # Вручную
-go build -ldflags "-X github.com/rd2w/jira-parser/internal/version.App.Version=v1.2.3 -X github.com/rd2w/jira-parser/internal/version.App.Commit=$(git rev-parse HEAD) -X github.com/rd2w/jira-parser/internal/version.App.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o jira-parser cmd/jira-parser/main.go
+go build -ldflags "-X main.buildVersion=v1.2.3 -X main.buildCommit=$(git rev-parse HEAD) -X main.buildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o jira-parser cmd/jira-parser/main.go
 
 # Или с использованием переменных
-VERSION=v1.2.3
+VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev")
 COMMIT=$(git rev-parse HEAD)
 DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-go build -ldflags "-X github.com/rd2w/jira-parser/internal/version.App.Version=$VERSION -X github.com/rd2w/jira-parser/internal/version.App.Commit=$COMMIT -X github.com/rd2w/jira-parser/internal/version.App.Date=$DATE" -o jira-parser cmd/jira-parser/main.go
+go build -ldflags "-X main.buildVersion=$VERSION -X main.buildCommit=$COMMIT -X main.buildDate=$DATE" -o jira-parser cmd/jira-parser/main.go
 ```
 
 Для обычной сборки:
@@ -50,6 +50,19 @@ go build -ldflags "-X github.com/rd2w/jira-parser/internal/version.App.Version=$
 ```bash
 go build -o jira-parser cmd/jira-parser/main.go
 ```
+
+### Система версионирования
+
+Приложение поддерживает встроенные переменные версии, которые автоматически отображаются при вызове команды `jira-parser version`:
+
+- `buildVersion` - версия приложения (например, v1.2.3)
+- `buildCommit` - хеш Git-коммита, на котором была собрана версия
+- `buildDate` - дата и время сборки
+
+Эти значения могут быть заданы во время сборки с помощью флага `-ldflags` и переменных:
+- `-X main.buildVersion=...`
+- `-X main.buildCommit=...`
+- `-X main.buildDate=...`
 
 ## Конфигурация
 
@@ -63,17 +76,17 @@ jira:
 
 parsing:
   version_patterns:
-    - "(?i)Tested on (?:SW )?(v?[\d.]+(?:-[\w.]+)?)"
-    - "(?i)version.*?(v?[\d.]+(?:-[\w.]+)?)"
-    - "(?i)sw.*?(v?[\d.]+(?:-[\w.]+)?)"
+    - "(?i)Tested on (?:SW )?(v?[\\d.]+(?:-[\\w.]+)?)"
+    - "(?i)version.*?(v?[\\d.]+(?:-[\\w.]+)?)"
+    - "(?i)sw.*?(v?[\\d.]+(?:-[\\w.]+)?)"
  result_patterns:
-    - "(?i)Result:\s*([^\n\r]+)"
-    - "(?i)Status:\s*([^\n\r]+)"
+    - "(?i)Result:\\s*([^\\n\\r]+)"
+    - "(?i)Status:\\s*([^\\n\\r]+)"
     - "(?i)(Fixed|Not Fixed|Partially Fixed|Could not test|Passed|Failed|Blocked|Resolved|Verified|Re-Test|Pending|In Progress|N/A)"
   comment_patterns:
-    - "(?i)Comment:\s*(.+)"
-    - "(?i)Notes?:\s*(.+)"
-    - "(?i)Observations?:\s*(.+)"
+    - "(?i)Comment:\\s*(.+)"
+    - "(?i)Notes?:\\s*(.+)"
+    - "(?i)Observations?:\\s*(.+)"
   qa_indicators:
     - "tested on"
     - "could not test on sw"
@@ -88,7 +101,7 @@ parsing:
     passed: "Fixed"
     verified: "Fixed"
     resolved: "Fixed"
-    re-test: "Fixed"
+    "re-test": "Fixed"
     failed: "Not Fixed"
     blocked: "Not Fixed"
     pending: "Not Fixed"
