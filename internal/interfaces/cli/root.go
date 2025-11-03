@@ -186,6 +186,15 @@ func printMultipleIssues(issuesList *domain.IssuesList) {
 		} else {
 			fmt.Printf("\n%s\n", issue.Key)
 		}
+
+		// Выводим информацию о назначенном и QA владельце
+		if issue.AssigneeEmail != "" {
+			fmt.Printf("Assigned: %s\n", issue.AssigneeEmail)
+		}
+		if issue.QaOwnerEmail != "" {
+			fmt.Printf("QA Owner: %s\n", issue.QaOwnerEmail)
+		}
+
 		fmt.Printf("Found %d QA comments:\n\n", len(issue.Comments))
 
 		for i, comment := range issue.Comments {
@@ -210,12 +219,24 @@ func printMultipleIssues(issuesList *domain.IssuesList) {
 
 				if err == nil {
 					createdTime = t.Format("2006-01-02 15:04:05")
-					fmt.Printf("Comment #%d (%s):\n", i+1, createdTime)
+					if comment.AuthorEmail != "" {
+						fmt.Printf("Comment #%d (%s) from %s:\n", i+1, createdTime, comment.AuthorEmail)
+					} else {
+						fmt.Printf("Comment #%d (%s):\n", i+1, createdTime)
+					}
+				} else {
+					if comment.AuthorEmail != "" {
+						fmt.Printf("Comment #%d from %s:\n", i+1, comment.AuthorEmail)
+					} else {
+						fmt.Printf("Comment #%d:\n", i+1)
+					}
+				}
+			} else {
+				if comment.AuthorEmail != "" {
+					fmt.Printf("Comment #%d from %s:\n", i+1, comment.AuthorEmail)
 				} else {
 					fmt.Printf("Comment #%d:\n", i+1)
 				}
-			} else {
-				fmt.Printf("Comment #%d:\n", i+1)
 			}
 			fmt.Printf("  Version: %s\n", comment.SoftwareVersion)
 

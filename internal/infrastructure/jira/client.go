@@ -58,14 +58,27 @@ func NewJiraClient(baseURL, username, token string, parsingConfig domain.Parsing
 }
 
 func (jc *JiraClient) GetIssueInfo(issueKey string) (*domain.IssueInfo, error) {
-	issue, _, err := jc.client.Issue.GetWithContext(context.Background(), issueKey, nil)
+	issue, _, err := jc.client.Issue.GetWithContext(context.Background(), issueKey, &jira.GetQueryOptions{
+		Expand: "names,renderedFields", // Расширяем, чтобы получить больше информации о полях
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get issue %s: %w", issueKey, err)
 	}
 
+	assigneeEmail := ""
+	if issue.Fields.Assignee != nil {
+		assigneeEmail = issue.Fields.Assignee.EmailAddress
+	}
+
+	// В JIRA нет специального поля "QA Owner", но мы можем определить QA владельца как
+	// пользователя, оставившего последний QA комментарий
+	qaOwnerEmail := jc.getQaOwnerEmail(issue)
+
 	return &domain.IssueInfo{
-		Key:     issue.Key,
-		Summary: issue.Fields.Summary,
+		Key:           issue.Key,
+		Summary:       issue.Fields.Summary,
+		AssigneeEmail: assigneeEmail,
+		QaOwnerEmail:  qaOwnerEmail,
 	}, nil
 }
 
@@ -100,6 +113,9 @@ func (jc *JiraClient) GetLastQAComment(issueKey string) (*domain.QAComment, erro
 				// Continue processing other comments even if one fails
 				continue
 			}
+
+			// Добавляем email автора комментария
+			qaComment.AuthorEmail = comment.Author.EmailAddress
 
 			// Only return the comment if it has meaningful data
 			if qaComment.SoftwareVersion != "" || qaComment.TestResult != "" || qaComment.Comment != "" {
@@ -138,6 +154,9 @@ func (jc *JiraClient) getComments(ctx context.Context, issueKey string) ([]domai
 				// Continue processing other comments even if one fails
 				continue
 			}
+
+			// Добавляем email автора комментария
+			qaComment.AuthorEmail = comment.Author.EmailAddress
 
 			// Only add the comment if it has meaningful data
 			if qaComment.SoftwareVersion != "" || qaComment.TestResult != "" || qaComment.Comment != "" {
@@ -346,4 +365,21 @@ func (jc *JiraClient) removeJiraFormatting(text string) string {
 	text = quoteRe.ReplaceAllString(text, "$1")
 
 	return strings.TrimSpace(text)
+}
+
+// getQaOwnerEmail определяет QA владельца как пользователя, оставившего последний QA комментарий
+func (jc *JiraClient) getQaOwnerEmail(issue *jira.Issue) string {
+	if issue.Fields.Comments == nil {
+		return ""
+	}
+
+	// Ищем последний QA комментарий и возвращаем email его автора
+	for i := len(issue.Fields.Comments.Comments) - 1; i >= 0; i-- {
+		comment := issue.Fields.Comments.Comments[i]
+		if jc.isQAComment(comment.Body) && comment.Author.EmailAddress != "" {
+			return comment.Author.EmailAddress
+		}
+	}
+
+	return ""
 }

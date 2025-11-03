@@ -5,6 +5,7 @@
 ## Возможности
 
 - 📊 **Парсинг комментариев QA** - автоматическое извлечение информации о версии, результате тестирования и комментариев
+- 📧 **Отображение email-адресов** - показ email-адресов назначенного (Assignee), QA владельца и авторов комментариев
 - 🎯 **Поддержка различных форматов** - обработка комментариев с форматированием (жирный, курсив, цвет) и ссылками
 - 🔍 **Гибкий поиск** - фильтрация комментариев по типу результата (Fixed, Not Fixed, Partially Fixed, Could not test, Blocked, etc.)
 - 📝 **Чистая архитектура** - проект построен с соблюдением принципов чистой архитектуры для легкого поддержания и расширения
@@ -223,22 +224,28 @@ tickets:
 ## Пример вывода
 
 ```
-Issue: TOS-30690
-Found 3 QA comments:
+TOS-30344: [Modem On/Off] Replace vendor RIL property
+Assigned: i.petrov@example.com
+QA Owner: v.sidorov@example.com
+Found 4 QA comments:
 
-Comment #1:
+Comment #1 (2025-07-12 16:35:38) from v.sidorov@example.com:
   Version: v1.4.0
+  Result: Not Fixed
+  Info: Issue reproduces when clicking button X
+
+Comment #2 (2025-07-18 11:28:56) from v.sidorov@example.com:
+  Version: v1.4.1
+  Result: Partially Fixed
+  Info: The cellular module does not change state upon reboot (remains on or off)
+
+Comment #3 (2025-07-20 17:45:57) from a.markov@example.com:
+  Version: v1.4.2
   Result: Fixed
 
-Comment #2:
-  Version: v1.4.1
-  Result: Not Fixed
-  Comment: Issue reproduces when clicking button X
-
-Comment #3:
-  Version: v1.4.2
-  Result: Partially Fixed
-  Comment: [Login] works; [Dashboard] still broken
+Comment #4 (2025-08-08 11:30:56) from v.sidorov@example.com:
+  Version: v1.4.3
+  Result: Fixed
 ```
 
 ## Поддерживаемые форматы комментариев

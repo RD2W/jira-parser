@@ -33,16 +33,20 @@ func (s *CommentService) ParseComments(issueKey string) (*domain.Issue, error) {
 		log.Printf("Warning: Could not get issue info for %s: %v", issueKey, err)
 		// Continue with empty summary if we can't get the issue info
 		issueInfo = &domain.IssueInfo{
-			Key:     issueKey,
-			Summary: "",
+			Key:           issueKey,
+			Summary:       "",
+			AssigneeEmail: "",
+			QaOwnerEmail:  "",
 		}
 	}
 
 	log.Printf("Successfully parsed %d comments for issue %s", len(comments), issueKey)
 	return &domain.Issue{
-		Key:      issueInfo.Key,
-		Summary:  issueInfo.Summary,
-		Comments: comments,
+		Key:           issueInfo.Key,
+		Summary:       issueInfo.Summary,
+		AssigneeEmail: issueInfo.AssigneeEmail,
+		QaOwnerEmail:  issueInfo.QaOwnerEmail,
+		Comments:      comments,
 	}, nil
 }
 
