@@ -12,11 +12,15 @@ import (
 )
 
 func NewLastCommentCommand() *cobra.Command {
-	return &cobra.Command{
+	var ticketsFile string
+
+	cmd := &cobra.Command{
 		Use:   "last-comment [issue-keys...]",
 		Short: "Get the last QA comment for issue(s)",
 		Long: `Get the last QA comment for issue(s).
-If no issue keys are provided, reads tickets from configs/tickets.yaml.`,
+If no issue keys are provided, reads tickets from the specified file or from configs/tickets.yaml by default.
+Example: jira-parser last-comment TOS-30690 TOS-30692
+Example: jira-parser last-comment --tickets-file ./my-tickets.yaml`,
 		Args: cobra.ArbitraryArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			service, err := createCommentService()
@@ -30,8 +34,13 @@ If no issue keys are provided, reads tickets from configs/tickets.yaml.`,
 			if len(args) > 0 {
 				ticketKeys = args
 			} else {
-				// Otherwise, load ticket list from the config file
-				ticketsConfig, err := config.LoadTickets("./configs/tickets.yaml")
+				// Otherwise, load ticket list from the specified file or default
+				ticketsFilePath := ticketsFile
+				if ticketsFilePath == "" {
+					ticketsFilePath = "./configs/tickets.yaml"
+				}
+
+				ticketsConfig, err := config.LoadTickets(ticketsFilePath)
 				if err != nil {
 					log.Fatalf("Failed to read tickets file: %v", err)
 				}
@@ -56,6 +65,10 @@ If no issue keys are provided, reads tickets from configs/tickets.yaml.`,
 			}
 		},
 	}
+
+	cmd.Flags().StringVar(&ticketsFile, "tickets-file", "", "Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)")
+
+	return cmd
 }
 
 func printLastComment(issueKey string, comment *domain.QAComment) {

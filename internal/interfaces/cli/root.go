@@ -65,13 +65,16 @@ func NewParseMultipleCommand() *cobra.Command {
 	var resultFilter string
 	var dateFrom string
 	var dateTo string
+	var ticketsFile string
 
 	cmd := &cobra.Command{
 		Use:   "parse-multiple [tickets...]",
 		Short: "Parse QA comments for multiple tickets from tickets file or command line arguments",
 		Long: `Parse QA comments for multiple tickets.
 If tickets are provided as arguments, they will be used instead of the tickets file.
-Example: jira-parser parse-multiple TOS-30690 TOS-30692`,
+If no arguments are provided, loads tickets from the specified file or from ./configs/tickets.yaml by default.
+Example: jira-parser parse-multiple TOS-30690 TOS-30692
+Example: jira-parser parse-multiple --tickets-file ./my-tickets.yaml`,
 		Args: cobra.ArbitraryArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			service, err := createCommentService()
@@ -85,8 +88,13 @@ Example: jira-parser parse-multiple TOS-30690 TOS-30692`,
 			if len(args) > 0 {
 				ticketKeys = args
 			} else {
-				// Иначе загружаем список тикетов из отдельного файла
-				ticketsConfig, err := config.LoadTickets("./configs/tickets.yaml")
+				// Иначе загружаем список тикетов из файла
+				ticketsFilePath := ticketsFile
+				if ticketsFilePath == "" {
+					ticketsFilePath = "./configs/tickets.yaml"
+				}
+
+				ticketsConfig, err := config.LoadTickets(ticketsFilePath)
 				if err != nil {
 					log.Fatalf("Failed to read tickets file: %v", err)
 				}
@@ -173,6 +181,7 @@ Example: jira-parser parse-multiple TOS-30690 TOS-30692`,
 	cmd.Flags().StringVar(&resultFilter, "result", "", "Filter comments by test result (e.g., Fixed, Not Fixed, etc.)")
 	cmd.Flags().StringVar(&dateFrom, "date-from", "", "Filter comments created after specified date (format: YYYY-MM-DD)")
 	cmd.Flags().StringVar(&dateTo, "date-to", "", "Filter comments created before specified date (format: YYYY-MM-DD)")
+	cmd.Flags().StringVar(&ticketsFile, "tickets-file", "", "Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)")
 
 	return cmd
 }

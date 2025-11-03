@@ -184,8 +184,11 @@ tickets:
 ### Получение последнего QA комментария
 
 ```bash
-# Получить только последний QA комментарий
+# Получить только последний QA комментарий для конкретного тикета
 ./jira-parser last-comment TOS-30690
+
+# Получить последние QA комментарии для тикетов из указанного YAML-файла
+./jira-parser last-comment --tickets-file ./my-tickets.yaml
 ```
 
 ### Получение версии приложения
@@ -203,6 +206,9 @@ tickets:
 
 # Обработать конкретные тикеты, переданные в качестве аргументов
 ./jira-parser parse-multiple TOS-30690 TOS-30692 TOS-30693
+
+# Обработать тикеты из указанного YAML-файла
+./jira-parser parse-multiple --tickets-file ./my-tickets.yaml
 
 # Обработать тикеты с фильтрацией по результату
 ./jira-parser parse-multiple TOS-30690 TOS-30692 --result="Fixed"
