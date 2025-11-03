@@ -5,9 +5,15 @@ import (
 	"log"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/rd2w/jira-parser/internal/domain"
 	"github.com/spf13/cobra"
 )
+
+func init() {
+	// Ensure colors are enabled
+	color.NoColor = false
+}
 
 func NewParseCommand() *cobra.Command {
 	var resultFilter string
@@ -39,8 +45,21 @@ func NewParseCommand() *cobra.Command {
 
 				// Apply date filters
 				if dateFrom != "" || dateTo != "" {
-					// Parse comment creation date
-					commentTime, err := time.Parse(time.RFC3339, comment.Created)
+					// Parse comment creation date - try multiple formats since JIRA can return different timestamp formats
+					var commentTime time.Time
+					var err error
+
+					// Try the JIRA format with milliseconds and timezone offset: 2025-08-12T16:35:38.514+0300
+					commentTime, err = time.Parse("2006-01-02T15:04:05.000-0700", comment.Created)
+					if err != nil {
+						// Try standard RFC3339 format
+						commentTime, err = time.Parse(time.RFC3339, comment.Created)
+					}
+					if err != nil {
+						// Try another common format
+						commentTime, err = time.Parse("2006-01-02T15:04:05-0700", comment.Created)
+					}
+
 					if err != nil {
 						log.Printf("Warning: Could not parse comment creation date: %s", comment.Created)
 						// Skip date filtering for this comment if we can't parse the date
@@ -88,15 +107,67 @@ func NewParseCommand() *cobra.Command {
 }
 
 func printIssueComments(issue *domain.Issue) {
-	fmt.Printf("Issue: %s\n", issue.Key)
+	if issue.Summary != "" {
+		fmt.Printf("\n%s: %s\n", issue.Key, issue.Summary)
+	} else {
+		fmt.Printf("\n%s\n", issue.Key)
+	}
+
+	// Выводим информацию о назначенном и QA владельце
+	if issue.AssigneeEmail != "" {
+		fmt.Printf("Assigned: %s\n", issue.AssigneeEmail)
+	}
+	if issue.QaOwnerEmail != "" {
+		fmt.Printf("QA Owner: %s\n", issue.QaOwnerEmail)
+	}
+
 	fmt.Printf("Found %d QA comments:\n\n", len(issue.Comments))
 
 	for i, comment := range issue.Comments {
-		fmt.Printf("Comment #%d:\n", i+1)
+		// Format the creation date for display
+		createdTime := ""
+		if comment.Created != "" {
+			// Parse the timestamp and format it as "YYYY-MM-DD HH:MM:SS"
+			// Try multiple formats since JIRA can return different timestamp formats
+			var t time.Time
+			var err error
+
+			// Try the JIRA format with milliseconds and timezone offset: 2025-08-12T16:35:38.514+0300
+			t, err = time.Parse("2006-01-02T15:04:05.000-0700", comment.Created)
+			if err != nil {
+				// Try standard RFC3339 format
+				t, err = time.Parse(time.RFC3339, comment.Created)
+			}
+			if err != nil {
+				// Try another common format
+				t, err = time.Parse("2006-01-02T15:04:05-0700", comment.Created)
+			}
+
+			if err == nil {
+				createdTime = t.Format("2006-01-02 15:04:05")
+				if comment.AuthorEmail != "" {
+					fmt.Printf("Comment #%d (%s) from %s:\n", i+1, createdTime, comment.AuthorEmail)
+				} else {
+					fmt.Printf("Comment #%d (%s):\n", i+1, createdTime)
+				}
+			} else {
+				if comment.AuthorEmail != "" {
+					fmt.Printf("Comment #%d from %s:\n", i+1, comment.AuthorEmail)
+				} else {
+					fmt.Printf("Comment #%d:\n", i+1)
+				}
+			}
+		} else {
+			fmt.Printf("Comment #%d:\n", i+1)
+		}
 		fmt.Printf("  Version: %s\n", comment.SoftwareVersion)
-		fmt.Printf("  Result: %s\n", comment.TestResult)
+
+		// Use colored output for test result
+		resultColor := getColorForStatus(comment.TestResult)
+		_, _ = resultColor.Printf("  Result: %s\n", comment.TestResult)
+
 		if comment.Comment != "" {
-			fmt.Printf("  Comment: %s\n", comment.Comment)
+			fmt.Printf("  Info: %s\n", comment.Comment)
 		}
 		fmt.Println()
 	}

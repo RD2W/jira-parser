@@ -5,14 +5,25 @@ type QAComment struct {
 	SoftwareVersion string
 	TestResult      string // "Fixed", "Not Fixed", "Partially Fixed", "Could not test"
 	Comment         string
-	Created         string // Дата создания комментария в формате RFC3339
+	Created         string // Дата создания комментария в формате RFC339
+	AuthorEmail     string // Email автора комментария
+}
+
+// IssueInfo содержит основную информацию о JIRA тикете
+type IssueInfo struct {
+	Key           string
+	Summary       string
+	AssigneeEmail string // Email назначенного
+	QaOwnerEmail  string // Email QA владельца (пользователя, оставляющего QA комментарии)
 }
 
 // Issue представляет JIRA тикет с комментариями
 type Issue struct {
-	Key      string
-	Summary  string
-	Comments []QAComment
+	Key           string
+	Summary       string
+	AssigneeEmail string // Email назначенного
+	QaOwnerEmail  string // Email QA владельца (пользователя, оставляющего QA комментарии)
+	Comments      []QAComment
 }
 
 // IssuesList представляет список JIRA тикетов с комментариями
@@ -33,6 +44,7 @@ type ParsingConfig struct {
 type CommentRepository interface {
 	GetIssueComments(issueKey string) ([]QAComment, error)
 	GetLastQAComment(issueKey string) (*QAComment, error)
+	GetIssueInfo(issueKey string) (*IssueInfo, error)
 }
 
 // CommentService интерфейс для бизнес-логики

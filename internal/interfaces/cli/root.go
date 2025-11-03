@@ -65,13 +65,16 @@ func NewParseMultipleCommand() *cobra.Command {
 	var resultFilter string
 	var dateFrom string
 	var dateTo string
+	var ticketsFile string
 
 	cmd := &cobra.Command{
 		Use:   "parse-multiple [tickets...]",
 		Short: "Parse QA comments for multiple tickets from tickets file or command line arguments",
 		Long: `Parse QA comments for multiple tickets.
 If tickets are provided as arguments, they will be used instead of the tickets file.
-Example: jira-parser parse-multiple TOS-30690 TOS-30692`,
+If no arguments are provided, loads tickets from the specified file or from ./configs/tickets.yaml by default.
+Example: jira-parser parse-multiple TOS-30690 TOS-30692
+Example: jira-parser parse-multiple --tickets-file ./my-tickets.yaml`,
 		Args: cobra.ArbitraryArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			service, err := createCommentService()
@@ -85,8 +88,13 @@ Example: jira-parser parse-multiple TOS-30690 TOS-30692`,
 			if len(args) > 0 {
 				ticketKeys = args
 			} else {
-				// Иначе загружаем список тикетов из отдельного файла
-				ticketsConfig, err := config.LoadTickets("./configs/tickets.yaml")
+				// Иначе загружаем список тикетов из файла
+				ticketsFilePath := ticketsFile
+				if ticketsFilePath == "" {
+					ticketsFilePath = "./configs/tickets.yaml"
+				}
+
+				ticketsConfig, err := config.LoadTickets(ticketsFilePath)
 				if err != nil {
 					log.Fatalf("Failed to read tickets file: %v", err)
 				}
@@ -115,8 +123,21 @@ Example: jira-parser parse-multiple TOS-30690 TOS-30692`,
 
 						// Apply date filters
 						if dateFrom != "" || dateTo != "" {
-							// Parse comment creation date
-							commentTime, err := time.Parse(time.RFC3339, comment.Created)
+							// Parse comment creation date - try multiple formats since JIRA can return different timestamp formats
+							var commentTime time.Time
+							var err error
+
+							// Try the JIRA format with milliseconds and timezone offset: 2025-08-12T16:35:38.514+0300
+							commentTime, err = time.Parse("2006-01-02T15:04:05.000-0700", comment.Created)
+							if err != nil {
+								// Try standard RFC3339 format
+								commentTime, err = time.Parse(time.RFC3339, comment.Created)
+							}
+							if err != nil {
+								// Try another common format
+								commentTime, err = time.Parse("2006-01-02T15:04:05-0700", comment.Created)
+							}
+
 							if err != nil {
 								log.Printf("Warning: Could not parse comment creation date: %s", comment.Created)
 								// Skip date filtering for this comment if we can't parse the date
@@ -160,23 +181,80 @@ Example: jira-parser parse-multiple TOS-30690 TOS-30692`,
 	cmd.Flags().StringVar(&resultFilter, "result", "", "Filter comments by test result (e.g., Fixed, Not Fixed, etc.)")
 	cmd.Flags().StringVar(&dateFrom, "date-from", "", "Filter comments created after specified date (format: YYYY-MM-DD)")
 	cmd.Flags().StringVar(&dateTo, "date-to", "", "Filter comments created before specified date (format: YYYY-MM-DD)")
+	cmd.Flags().StringVar(&ticketsFile, "tickets-file", "", "Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)")
 
 	return cmd
 }
 
 func printMultipleIssues(issuesList *domain.IssuesList) {
-	fmt.Printf("Found %d issues with QA comments:\n\n", len(issuesList.Issues))
+	fmt.Printf("\nChecked %d issues with QA comments:\n\n", len(issuesList.Issues))
 
 	for _, issue := range issuesList.Issues {
-		fmt.Printf("Issue: %s\n", issue.Key)
+		if issue.Summary != "" {
+			fmt.Printf("\n%s: %s\n", issue.Key, issue.Summary)
+		} else {
+			fmt.Printf("\n%s\n", issue.Key)
+		}
+
+		// Выводим информацию о назначенном и QA владельце
+		if issue.AssigneeEmail != "" {
+			fmt.Printf("Assigned: %s\n", issue.AssigneeEmail)
+		}
+		if issue.QaOwnerEmail != "" {
+			fmt.Printf("QA Owner: %s\n", issue.QaOwnerEmail)
+		}
+
 		fmt.Printf("Found %d QA comments:\n\n", len(issue.Comments))
 
 		for i, comment := range issue.Comments {
-			fmt.Printf("Comment #%d:\n", i+1)
-			fmt.Printf(" Version: %s\n", comment.SoftwareVersion)
-			fmt.Printf(" Result: %s\n", comment.TestResult)
+			// Format the creation date for display
+			createdTime := ""
+			if comment.Created != "" {
+				// Parse the timestamp and format it as "YYYY-MM-DD HH:MM:SS"
+				// Try multiple formats since JIRA can return different timestamp formats
+				var t time.Time
+				var err error
+
+				// Try the JIRA format with milliseconds and timezone offset: 2025-08-12T16:35:38.514+0300
+				t, err = time.Parse("2006-01-02T15:04:05.000-0700", comment.Created)
+				if err != nil {
+					// Try standard RFC3339 format
+					t, err = time.Parse(time.RFC3339, comment.Created)
+				}
+				if err != nil {
+					// Try another common format
+					t, err = time.Parse("2006-01-02T15:04:05-0700", comment.Created)
+				}
+
+				if err == nil {
+					createdTime = t.Format("2006-01-02 15:04:05")
+					if comment.AuthorEmail != "" {
+						fmt.Printf("Comment #%d (%s) from %s:\n", i+1, createdTime, comment.AuthorEmail)
+					} else {
+						fmt.Printf("Comment #%d (%s):\n", i+1, createdTime)
+					}
+				} else {
+					if comment.AuthorEmail != "" {
+						fmt.Printf("Comment #%d from %s:\n", i+1, comment.AuthorEmail)
+					} else {
+						fmt.Printf("Comment #%d:\n", i+1)
+					}
+				}
+			} else {
+				if comment.AuthorEmail != "" {
+					fmt.Printf("Comment #%d from %s:\n", i+1, comment.AuthorEmail)
+				} else {
+					fmt.Printf("Comment #%d:\n", i+1)
+				}
+			}
+			fmt.Printf("  Version: %s\n", comment.SoftwareVersion)
+
+			// Use colored output for test result
+			resultColor := getColorForStatus(comment.TestResult)
+			_, _ = resultColor.Printf("  Result: %s\n", comment.TestResult)
+
 			if comment.Comment != "" {
-				fmt.Printf(" Comment: %s\n", comment.Comment)
+				fmt.Printf("  Comment: %s\n", comment.Comment)
 			}
 			fmt.Println()
 		}

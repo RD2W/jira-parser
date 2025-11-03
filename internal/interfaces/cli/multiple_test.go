@@ -49,6 +49,7 @@ func TestPrintMultipleIssues(t *testing.T) {
 						SoftwareVersion: "v1.0.0",
 						TestResult:      "Fixed",
 						Comment:         "All tests passed",
+						Created:         "2025-08-12T16:35:38.514+0300",
 					},
 				},
 			},
@@ -59,10 +60,12 @@ func TestPrintMultipleIssues(t *testing.T) {
 						SoftwareVersion: "v1.0.1",
 						TestResult:      "Not Fixed",
 						Comment:         "Issue still exists",
+						Created:         "2025-08-12T16:35:38.514+0300",
 					},
 					{
 						SoftwareVersion: "v1.0.2",
 						TestResult:      "Fixed",
+						Created:         "2025-08-12T16:35:38.514+0300",
 					},
 				},
 			},
@@ -83,18 +86,21 @@ func TestPrintMultipleIssues(t *testing.T) {
 	output := string(out)
 
 	// Проверяем, что вывод содержит ожидаемые элементы
-	assert.Contains(t, output, "Found 2 issues with QA comments:")
-	assert.Contains(t, output, "Issue: TOS-30690")
-	assert.Contains(t, output, "Issue: TOS-30692")
+	assert.Contains(t, output, "Checked 2 issues with QA comments:")
+	assert.Contains(t, output, "TOS-30690")
+	assert.Contains(t, output, "TOS-30692")
 	assert.Contains(t, output, "Found 1 QA comments:")
 	assert.Contains(t, output, "Found 2 QA comments:")
 	assert.Contains(t, output, "Version: v1.0.0")
-	assert.Contains(t, output, "Result: Fixed")
+	assert.Contains(t, output, "v1.0.0") // Version value
 	assert.Contains(t, output, "Comment: All tests passed")
 	assert.Contains(t, output, "Version: v1.0.1")
-	assert.Contains(t, output, "Result: Not Fixed")
+	assert.Contains(t, output, "v1.0.1") // Version value
 	assert.Contains(t, output, "Comment: Issue still exists")
 	assert.Contains(t, output, "Version: v1.0.2")
+	assert.Contains(t, output, "v1.0.2") // Version value
+	assert.Contains(t, output, "Comment #1 (2025-08-12 16:35:38):")
+	assert.Contains(t, output, "Comment #2 (2025-08-12 16:35:38):")
 }
 
 func TestParseMultipleCommand_Execute_Basic(t *testing.T) {

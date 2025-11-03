@@ -59,22 +59,28 @@ Parse all QA comments for an issue
 Usage: jira-parser parse <issue-key>
 
 Flags:
- --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
+  --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
   --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
   --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
 
 ### last-comment
 Get the last QA comment for an issue
 
-Usage: jira-parser last-comment <issue-key>
-
-### export
-Export all QA comments as JSON
-
-Usage: jira-parser export <issue-key>
+Usage: jira-parser last-comment [issue-key...]
 
 Flags:
-  -p, --pretty  Pretty print JSON output
+      --tickets-file Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
+
+### export
+Export all QA comments as JSON or HTML
+
+Usage: jira-parser export [issue-key...]
+
+Flags:
+  -p, --pretty       Pretty print JSON output
+  -f, --format       Output format (json or html) (default "json")
+      --output-dir   Output directory for exported files (default "./QA_comments")
+      --tickets-file Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 ### parse-multiple
 Parse QA comments for multiple tickets from tickets file or command line arguments
@@ -82,9 +88,10 @@ Parse QA comments for multiple tickets from tickets file or command line argumen
 Usage: jira-parser parse-multiple [tickets...]
 
 Flags:
- --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
+  --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
   --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
   --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
+  --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 ### version
 Print the version number of jira-parser
@@ -119,11 +126,23 @@ Parse with date range:
 Export as JSON:
   jira-parser export TOS-30690 --pretty
 
+Export as HTML:
+  jira-parser export TOS-30690 --format html --output-dir ./reports
+
 Parse multiple tickets:
  jira-parser parse-multiple TOS-30690 TOS-30692
 
+Parse multiple tickets from file:
+ jira-parser parse-multiple --tickets-file ./my-tickets.yaml
+
 Get last comment:
   jira-parser last-comment TOS-30690
+
+Get last comment for multiple issues:
+  jira-parser last-comment TOS-30690 TOS-30692
+
+Get last comment from tickets file:
+  jira-parser last-comment --tickets-file ./my-tickets.yaml
 `
 
 	filePath := filepath.Join(outputDir, "jira-parser.md")
@@ -170,16 +189,25 @@ last-comment command:
  Usage: jira-parser last-comment <issue-key>
 
 export command:
-  Usage: jira-parser export <issue-key>
-  Flags:
-    --pretty, -p  Pretty print JSON output
+   Usage: jira-parser export [issue-key...]
+   Flags:
+     --pretty, -p        Pretty print JSON output
+     --format, -f        Output format (json or html) (default: "json")
+     --output-dir        Output directory for exported files (default: "./QA_comments")
+     --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
+
+last-comment command:
+   Usage: jira-parser last-comment [issue-key...]
+   Flags:
+     --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 parse-multiple command:
- Usage: jira-parser parse-multiple [tickets...]
-  Flags:
-    --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
-    --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
-    --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
+  Usage: jira-parser parse-multiple [tickets...]
+   Flags:
+     --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
+     --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
+     --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
+     --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 docs command:
  Usage: jira-parser docs
