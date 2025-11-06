@@ -103,9 +103,9 @@ Example: jira-parser export --tickets-file ./my-tickets.yaml --format html --out
 	}
 
 	cmd.Flags().BoolP("pretty", "p", false, "Pretty print JSON output")
-	cmd.Flags().StringVar(&ticketsFile, "tickets-file", "", "Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)")
-	cmd.Flags().StringVarP(&outputFormat, "format", "f", "json", "Output format: json or html")
-	cmd.Flags().StringVar(&outputDir, "output-dir", "", "Output directory for exported files (default: ./QA_comments)")
+	cmd.Flags().StringVarP(&ticketsFile, "tickets-file", "f", "", "Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)")
+	cmd.Flags().StringVarP(&outputFormat, "format", "F", "json", "Output format: json or html")
+	cmd.Flags().StringVarP(&outputDir, "output-dir", "o", "", "Output directory for exported files (default: ./QA_comments)")
 	return cmd
 }
 

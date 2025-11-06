@@ -66,7 +66,7 @@ Example: jira-parser last-comment --tickets-file ./my-tickets.yaml`,
 		},
 	}
 
-	cmd.Flags().StringVar(&ticketsFile, "tickets-file", "", "Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)")
+	cmd.Flags().StringVarP(&ticketsFile, "tickets-file", "f", "", "Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)")
 
 	return cmd
 }
