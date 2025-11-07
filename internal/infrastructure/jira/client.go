@@ -12,6 +12,11 @@ import (
 	"github.com/rd2w/jira-parser/internal/infrastructure/auth"
 )
 
+const (
+	// QAOwnerField represents the custom field for QA Owner in JIRA
+	QAOwnerField = "customfield_12601"
+)
+
 type JiraClient struct {
 	client        *jira.Client
 	parsingConfig domain.ParsingConfig
@@ -70,9 +75,13 @@ func (jc *JiraClient) GetIssueInfo(issueKey string) (*domain.IssueInfo, error) {
 		assigneeEmail = issue.Fields.Assignee.EmailAddress
 	}
 
-	// В JIRA нет специального поля "QA Owner", но мы можем определить QA владельца как
-	// пользователя, оставившего последний QA комментарий
-	qaOwnerEmail := jc.getQaOwnerEmail(issue)
+	// Попробуем получить QA владельца из кастомного поля customfield_12601
+	qaOwnerEmail := jc.getQaOwnerFromCustomField(issue)
+
+	// Если кастомное поле пустое, используем резервную логику - последний QA комментарий
+	if qaOwnerEmail == "" {
+		qaOwnerEmail = jc.getQaOwnerFromLastComment(issue)
+	}
 
 	return &domain.IssueInfo{
 		Key:           issue.Key,
@@ -367,8 +376,21 @@ func (jc *JiraClient) removeJiraFormatting(text string) string {
 	return strings.TrimSpace(text)
 }
 
-// getQaOwnerEmail определяет QA владельца как пользователя, оставившего последний QA комментарий
-func (jc *JiraClient) getQaOwnerEmail(issue *jira.Issue) string {
+// getQaOwnerFromCustomField пытается получить email QA владельца из кастомного поля
+func (jc *JiraClient) getQaOwnerFromCustomField(issue *jira.Issue) string {
+	if qaOwnerField, exists := issue.Fields.Unknowns[QAOwnerField]; exists && qaOwnerField != nil {
+		// Проверяем, что поле содержит структуру пользователя с email
+		if userMap, ok := qaOwnerField.(map[string]interface{}); ok {
+			if email, ok := userMap["emailAddress"].(string); ok && email != "" {
+				return email
+			}
+		}
+	}
+	return ""
+}
+
+// getQaOwnerFromLastComment определяет QA владельца как пользователя, оставившего последний QA комментарий
+func (jc *JiraClient) getQaOwnerFromLastComment(issue *jira.Issue) string {
 	if issue.Fields.Comments == nil {
 		return ""
 	}

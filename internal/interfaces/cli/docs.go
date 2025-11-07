@@ -43,7 +43,7 @@ Supports multiple output formats: markdown, man, rest, and yaml.`,
 	}
 
 	cmd.Flags().StringVarP(&outputDir, "output", "o", "./docs", "Output directory for documentation")
-	cmd.Flags().StringVarP(&format, "format", "f", "markdown", "Output format (markdown, offline-help)")
+	cmd.Flags().StringVarP(&format, "format", "F", "markdown", "Output format (markdown, offline-help)")
 
 	return cmd
 }
@@ -59,9 +59,9 @@ Parse all QA comments for an issue
 Usage: jira-parser parse <issue-key>
 
 Flags:
-  --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
-  --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
-  --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
+  -r, --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
+  -d, --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
+  -t, --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
 
 ### last-comment
 Get the last QA comment for an issue
@@ -69,7 +69,7 @@ Get the last QA comment for an issue
 Usage: jira-parser last-comment [issue-key...]
 
 Flags:
-      --tickets-file Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
+  -f, --tickets-file Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 ### export
 Export all QA comments as JSON or HTML
@@ -78,9 +78,9 @@ Usage: jira-parser export [issue-key...]
 
 Flags:
   -p, --pretty       Pretty print JSON output
-  -f, --format       Output format (json or html) (default "json")
-      --output-dir   Output directory for exported files (default "./QA_comments")
-      --tickets-file Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
+  -F, --format       Output format (json or html) (default "json")
+  -o, --output-dir   Output directory for exported files (default "./QA_comments")
+  -f, --tickets-file Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 ### parse-multiple
 Parse QA comments for multiple tickets from tickets file or command line arguments
@@ -88,10 +88,10 @@ Parse QA comments for multiple tickets from tickets file or command line argumen
 Usage: jira-parser parse-multiple [tickets...]
 
 Flags:
-  --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
-  --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
-  --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
-  --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
+  -r, --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
+  -d, --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
+  -t, --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
+  -f, --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 ### version
 Print the version number of jira-parser
@@ -104,7 +104,7 @@ Generate CLI documentation
 Usage: jira-parser docs
 
 Flags:
-  -f, --format string   Output format (markdown, offline-help) (default "markdown")
+  -F, --format string   Output format (markdown, offline-help) (default "markdown")
   -o, --output string   Output directory for documentation (default "./docs")
 
 ### tutorial
@@ -181,9 +181,9 @@ COMMAND SPECIFICS:
 parse command:
   Usage: jira-parser parse <issue-key>
   Flags:
-    --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
-    --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
-    --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
+    -r, --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
+    -d, --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
+    -t, --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
 
 last-comment command:
  Usage: jira-parser last-comment <issue-key>
@@ -192,27 +192,27 @@ export command:
    Usage: jira-parser export [issue-key...]
    Flags:
      --pretty, -p        Pretty print JSON output
-     --format, -f        Output format (json or html) (default: "json")
-     --output-dir        Output directory for exported files (default: "./QA_comments")
-     --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
+     --format, -F        Output format (json or html) (default: "json")
+     --output-dir, -o    Output directory for exported files (default: "./QA_comments")
+     --tickets-file, -f  Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 last-comment command:
    Usage: jira-parser last-comment [issue-key...]
    Flags:
-     --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
+     -f, --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 parse-multiple command:
   Usage: jira-parser parse-multiple [tickets...]
    Flags:
-     --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
-     --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
-     --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
-     --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
+     -r, --result string     Filter comments by test result (e.g., Fixed, Not Fixed, etc.)
+     -d, --date-from string  Filter comments created after specified date (format: YYYY-MM-DD)
+     -t, --date-to string    Filter comments created before specified date (format: YYYY-MM-DD)
+     -f, --tickets-file      Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)
 
 docs command:
  Usage: jira-parser docs
   Flags:
-    --format value, -f value   Output format (markdown, offline-help) (default: "markdown")
+    --format value, -F value   Output format (markdown, offline-help) (default: "markdown")
     --output value, -o value   Output directory for documentation (default: "./docs")
 
 tutorial command:

@@ -178,10 +178,10 @@ Example: jira-parser parse-multiple --tickets-file ./my-tickets.yaml`,
 		},
 	}
 
-	cmd.Flags().StringVar(&resultFilter, "result", "", "Filter comments by test result (e.g., Fixed, Not Fixed, etc.)")
-	cmd.Flags().StringVar(&dateFrom, "date-from", "", "Filter comments created after specified date (format: YYYY-MM-DD)")
-	cmd.Flags().StringVar(&dateTo, "date-to", "", "Filter comments created before specified date (format: YYYY-MM-DD)")
-	cmd.Flags().StringVar(&ticketsFile, "tickets-file", "", "Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)")
+	cmd.Flags().StringVarP(&resultFilter, "result", "r", "", "Filter comments by test result (e.g., Fixed, Not Fixed, etc.)")
+	cmd.Flags().StringVarP(&dateFrom, "date-from", "d", "", "Filter comments created after specified date (format: YYYY-MM-DD)")
+	cmd.Flags().StringVarP(&dateTo, "date-to", "t", "", "Filter comments created before specified date (format: YYYY-MM-DD)")
+	cmd.Flags().StringVarP(&ticketsFile, "tickets-file", "f", "", "Path to the YAML file containing the list of tickets (default: ./configs/tickets.yaml)")
 
 	return cmd
 }

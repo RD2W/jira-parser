@@ -72,8 +72,10 @@ go build -o jira-parser cmd/jira-parser/main.go
 ```yaml
 jira:
   base_url: "https://your-domain.atlassian.net"
-  username: "your-email@example.com"  # для Atlassian Cloud используйте email
-  token: "your-api-token"             # API токен для аутентификации
+  username: "your-email@example.com"  # Для Atlassian Cloud используйте email
+  token: "your-api-token"             # API токен для аутентификации (Personal Access Token)
+  # Для Basic Auth используйте:    token: "basic your-password"
+  # Для Bearer токена используйте: token: "bearer your-token"
 
 parsing:
   version_patterns:
@@ -111,8 +113,11 @@ parsing:
     "not applicable": "N/A"
 ```
 
-Для Atlassian Cloud используйте email в качестве username и API токен.
-Для self-hosted JIRA можно использовать username и пароль или API токен.
+Для аутентификации поддерживаются следующие методы:
+
+- **Personal Access Token** (рекомендуется для Atlassian Cloud): используйте email в качестве username и API токен в поле token
+- **Basic Auth** (для self-hosted JIRA): используйте username и пароль, указав префикс "basic" в поле token
+- **Bearer Token** (для некоторых OAuth-конфигураций): используйте префикс "bearer" в поле token
 
 Также создайте файл `configs/tickets.yaml` для указания тикетов, которые нужно обработать:
 
@@ -127,7 +132,7 @@ tickets:
 ### Поддерживаемые методы аутентификации
 
 - **Personal Access Token**: `token: "your-api-token"`
-- **Basic Auth**: `token: "your-password"`
+- **Basic Auth**: `token: "basic your-password"`
 - **Bearer Token**: `token: "bearer your-token"`
 
 ## Безопасность
@@ -173,12 +178,18 @@ tickets:
 
 # Получить QA комментарии с фильтрацией по результату
 ./jira-parser parse TOS-30690 --result="Fixed"
+# или с короткой формой
+./jira-parser parse TOS-30690 -r "Fixed"
 
 # Получить QA комментарии с фильтрацией по дате создания
 ./jira-parser parse TOS-30690 --date-from=2023-01-01 --date-to=2023-12-31
+# или с короткими формами
+./jira-parser parse TOS-30690 -d 2023-01-01 -t 2023-12-31
 
 # Получить QA комментарии с фильтрацией по нескольким критериям
 ./jira-parser parse TOS-30690 --result="Fixed" --date-from=2023-01-01
+# или с короткими формами
+./jira-parser parse TOS-30690 -r "Fixed" -d 2023-01-01
 ```
 
 ### Получение последнего QA комментария
@@ -192,6 +203,8 @@ tickets:
 
 # Получить последние QA комментарии для тикетов из указанного YAML-файла
 ./jira-parser last-comment --tickets-file ./my-tickets.yaml
+# или с короткой формой
+./jira-parser last-comment -f ./my-tickets.yaml
 ```
 
 ### Получение версии приложения
@@ -212,12 +225,18 @@ tickets:
 
 # Обработать тикеты из указанного YAML-файла
 ./jira-parser parse-multiple --tickets-file ./my-tickets.yaml
+# или с короткой формой
+./jira-parser parse-multiple -f ./my-tickets.yaml
 
 # Обработать тикеты с фильтрацией по результату
 ./jira-parser parse-multiple TOS-30690 TOS-30692 --result="Fixed"
+# или с короткой формой
+./jira-parser parse-multiple TOS-30690 TOS-30692 -r "Fixed"
 
 # Обработать тикеты с фильтрацией по дате создания
 ./jira-parser parse-multiple TOS-30690 TOS-30692 --date-from=2023-01-01 --date-to=2023-12-31
+# или с короткими формами
+./jira-parser parse-multiple TOS-30690 TOS-30692 -d 2023-01-01 -t 2023-12-31
 ```
 
 ### Экспорт данных в JSON и HTML
@@ -228,15 +247,21 @@ tickets:
 
 # Экспорт с форматированием
 ./jira-parser export TOS-30690 --pretty
+# или с короткой формой
+./jira-parser export TOS-30690 -p
 
 # Экспорт в HTML
 ./jira-parser export TOS-30690 --format html --output-dir ./reports
+# или с короткими формами
+./jira-parser export TOS-30690 -F html -o ./reports
 
 # Экспорт нескольких тикетов
 ./jira-parser export TOS-30690 TOS-30692
 
 # Экспорт тикетов из файла
 ./jira-parser export --tickets-file ./my-tickets.yaml
+# или с короткой формой
+./jira-parser export -f ./my-tickets.yaml
 ```
 
 ## Пример вывода
